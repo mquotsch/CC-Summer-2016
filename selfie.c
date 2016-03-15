@@ -668,11 +668,11 @@ void initDecoder() {
 
     FUNCTIONS = malloc(43 * SIZEOFINTSTAR);
 
-		*(FUNCTIONS + FCT_NOP)     = (int) "sll";
+    *(FUNCTIONS + FCT_NOP)     = (int) "sll";
     *(FUNCTIONS + FCT_SLL)     = (int) "sll"; 
-		*(FUNCTIONS + FCT_SRL)     = (int) "srl";
-		*(FUNCTIONS + FCT_SLLV)     = (int) "sllv";
-		*(FUNCTIONS + FCT_SRLV)     = (int) "srlv";
+    *(FUNCTIONS + FCT_SRL)     = (int) "srl";
+    *(FUNCTIONS + FCT_SLLV)    = (int) "sllv";
+    *(FUNCTIONS + FCT_SRLV)    = (int) "srlv";
     *(FUNCTIONS + FCT_JR)      = (int) "jr";
     *(FUNCTIONS + FCT_SYSCALL) = (int) "syscall";
     *(FUNCTIONS + FCT_MFHI)    = (int) "mfhi";
@@ -3800,7 +3800,7 @@ void decode() {
 // 32 bit
 //
 // +------+-----+-----+-----+-----+------+
-// |opcode|  rs |  rt |  rd |00000|fction|
+// |opcode|  rs |  rt |  rd |shamt|fction|
 // +------+-----+-----+-----+-----+------+
 //    6      5     5     5     5     6
 void decodeRFormat() {
@@ -5026,10 +5026,87 @@ void fct_nop() {
 }
 
 void fct_sll() {
-		if (debug) {
-				printFunction(function);
-				
+	if (debug) {
+		printFunction(function);
+        print((int*) " ");
+        printRegister(rd);
+        print((int*) ",");
+        printRegister(rt);
+        print((int*) ",");
+		print(itoa(immediate, string_buffer, 10, 0, 0));
+		if(interpret) {
+			print((int*) ": ");
+			printRegister(rd);
+			print((int*) "=");
+			print(itoa(*(registers+rd), string_buffer, 10, 0, 0));
+			print((int*) ",");
+			printRegister(rt);
+			print((int*) "=");
+			print(itoa(*(registers+rt), string_buffer, 10, 0, 0));
+			print((int*) ",");
+			printRegister(rs);
+			print((int*) "=");
+			print(itoa(*(registers+immediate), string_buffer, 10, 0, 0));
+		}		
+	}
+	
+	if(interpret) {
+		*(registers+rd) = leftshift(*(registers+rt), immediate);
+		
+		pc = pc + WORDSIZE;
+	}
+	
+	if(debug) { 
+		if(interpret) {
+			print((int*) " -> ");
+			printRegister(rd);
+			print((int*) "=");
+			print(itoa(*(registers+rd), string_buffer, 10, 0, 0));
 		}
+		println();
+	}
+}
+
+void fct_srl() {
+	if (debug) {
+		printFunction(function);
+        print((int*) " ");
+        printRegister(rd);
+        print((int*) ",");
+        printRegister(rt);
+        print((int*) ",");
+		print(itoa(immediate, string_buffer, 10, 0, 0));
+		if(interpret) {
+			print((int*) ": ");
+			printRegister(rd);
+			print((int*) "=");
+			print(itoa(*(registers+rd), string_buffer, 10, 0, 0));
+			print((int*) ",");
+			printRegister(rt);
+			print((int*) "=");
+			print(itoa(*(registers+rt), string_buffer, 10, 0, 0));
+			print((int*) ",");
+			printRegister(rs);
+			print((int*) "=");
+			print(itoa(*(registers+immediate), string_buffer, 10, 0, 0));
+		}		
+	}
+	
+	if(interpret) {
+		*(registers+rd) = rightshift(*(registers+rt), immediate);
+		
+		pc = pc + WORDSIZE;
+	}
+	
+	if(debug) { 
+		if(interpret) {
+			print((int*) " -> ");
+			printRegister(rd);
+			print((int*) "=");
+			print(itoa(*(registers+rd), string_buffer, 10, 0, 0));
+		}
+		println();
+	}
 }
 
 void op_jal() {

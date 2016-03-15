@@ -628,8 +628,8 @@ int *OPCODES; // array of strings representing MIPS opcodes
 int FCT_NOP     = 0;
 int FCT_SLL     = 0;
 int FCT_SRL     = 2;
-int FCT_SLLV     = 4;
-int FCT_SRLV     = 6;
+int FCT_SLLV    = 4;
+int FCT_SRLV    = 6;
 int FCT_JR      = 8;
 int FCT_SYSCALL = 12;
 int FCT_MFHI    = 16;
@@ -668,11 +668,11 @@ void initDecoder() {
 
     FUNCTIONS = malloc(43 * SIZEOFINTSTAR);
 
-		*(FUNCTIONS + FCT_NOP)     = (int) "sll";
+	*(FUNCTIONS + FCT_NOP)     = (int) "sll";
     *(FUNCTIONS + FCT_SLL)     = (int) "sll"; 
-		*(FUNCTIONS + FCT_SRL)     = (int) "srl";
-		*(FUNCTIONS + FCT_SLLV)     = (int) "sllv";
-		*(FUNCTIONS + FCT_SRLV)     = (int) "srlv";
+	*(FUNCTIONS + FCT_SRL)     = (int) "srl";
+	*(FUNCTIONS + FCT_SLLV)    = (int) "sllv";
+	*(FUNCTIONS + FCT_SRLV)    = (int) "srlv";
     *(FUNCTIONS + FCT_JR)      = (int) "jr";
     *(FUNCTIONS + FCT_SYSCALL) = (int) "syscall";
     *(FUNCTIONS + FCT_MFHI)    = (int) "mfhi";
@@ -3800,7 +3800,7 @@ void decode() {
 // 32 bit
 //
 // +------+-----+-----+-----+-----+------+
-// |opcode|  rs |  rt |  rd |00000|fction|
+// |opcode|  rs |  rt |  rd |shamt|fction|
 // +------+-----+-----+-----+-----+------+
 //    6      5     5     5     5     6
 void decodeRFormat() {
@@ -5043,10 +5043,6 @@ void fct_sll() {
 			printRegister(rt);
 			print((int*) "=");
 			print(itoa(*(registers+rt), string_buffer, 10, 0, 0));
-			print((int*) ",");
-			printRegister(rs);
-			print((int*) "=");
-			print(itoa(*(registers+immediate), string_buffer, 10, 0, 0));
 		}		
 	}
 	
@@ -5085,10 +5081,6 @@ void fct_srl() {
 			printRegister(rt);
 			print((int*) "=");
 			print(itoa(*(registers+rt), string_buffer, 10, 0, 0));
-			print((int*) ",");
-			printRegister(rs);
-			print((int*) "=");
-			print(itoa(*(registers+immediate), string_buffer, 10, 0, 0));
 		}		
 	}
 	

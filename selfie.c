@@ -672,7 +672,7 @@ void initDecoder() {
     *(FUNCTIONS + FCT_SLL)     = (int) "sll"; 
     *(FUNCTIONS + FCT_SRL)     = (int) "srl";
     *(FUNCTIONS + FCT_SLLV)    = (int) "sllv";
-	*(FUNCTIONS + FCT_SRLV)    = (int) "srlv";
+    *(FUNCTIONS + FCT_SRLV)    = (int) "srlv";
     *(FUNCTIONS + FCT_JR)      = (int) "jr";
     *(FUNCTIONS + FCT_SYSCALL) = (int) "syscall";
     *(FUNCTIONS + FCT_MFHI)    = (int) "mfhi";
@@ -5034,32 +5034,32 @@ void fct_sll() {
         printRegister(rt);
         print((int*) ",");
         print(itoa(immediate, string_buffer, 10, 0, 0));
-        if(interpret) {
-           print((int*) ": ");
-           printRegister(rd);
-           print((int*) "=");
-           print(itoa(*(registers+rd), string_buffer, 10, 0, 0));
-           print((int*) ",");
-           printRegister(rt);
-           print((int*) "=");
-           print(itoa(*(registers+rt), string_buffer, 10, 0, 0));
-        }		
+        if (interpret) {
+            print((int*) ": ");
+            printRegister(rd);
+            print((int*) "=");
+            print(itoa(*(registers+rd), string_buffer, 10, 0, 0));
+            print((int*) ",");
+            printRegister(rt);
+            print((int*) "=");
+            print(itoa(*(registers+rt), string_buffer, 10, 0, 0));
+        }
     }
-	
-    if(interpret) {
-       *(registers+rd) = leftShift(*(registers+rt), immediate);
-		
-       pc = pc + WORDSIZE;
+
+    if (interpret) {
+        *(registers+rd) = leftShift(*(registers+rt), immediate);
+
+        pc = pc + WORDSIZE;
     }
-	
-    if(debug) { 
-       if(interpret) {
-          print((int*) " -> ");
-          printRegister(rd);
-          print((int*) "=");
-          print(itoa(*(registers+rd), string_buffer, 10, 0, 0));
-       }
-       println();
+
+    if (debug) { 
+        if (interpret) {
+            print((int*) " -> ");
+            printRegister(rd);
+            print((int*) "=");
+            print(itoa(*(registers+rd), string_buffer, 10, 0, 0));
+        }
+        println();
     }
 }
 
@@ -5072,32 +5072,32 @@ void fct_srl() {
         printRegister(rt);
         print((int*) ",");
         print(itoa(immediate, string_buffer, 10, 0, 0));
-        if(interpret) {
-           print((int*) ": ");
-           printRegister(rd);
-           print((int*) "=");
-           print(itoa(*(registers+rd), string_buffer, 10, 0, 0));
-           print((int*) ",");
-           printRegister(rt);
-           print((int*) "=");
-           print(itoa(*(registers+rt), string_buffer, 10, 0, 0));
-        }		
+        if (interpret) {
+            print((int*) ": ");
+            printRegister(rd);
+            print((int*) "=");
+            print(itoa(*(registers+rd), string_buffer, 10, 0, 0));
+            print((int*) ",");
+            printRegister(rt);
+            print((int*) "=");
+            print(itoa(*(registers+rt), string_buffer, 10, 0, 0));
+        }
     }
-	
-    if(interpret) {
-       *(registers+rd) = rightShift(*(registers+rt), immediate);
-		
-       pc = pc + WORDSIZE;
+
+    if (interpret) {
+        *(registers+rd) = rightShift(*(registers+rt), immediate);
+
+        pc = pc + WORDSIZE;
     }
-	
-    if(debug) { 
-       if(interpret) {
-          print((int*) " -> ");
-          printRegister(rd);
-          print((int*) "=");
-          print(itoa(*(registers+rd), string_buffer, 10, 0, 0));
-       }
-       println();
+
+    if (debug) { 
+        if (interpret) {
+            print((int*) " -> ");
+            printRegister(rd);
+            print((int*) "=");
+            print(itoa(*(registers+rd), string_buffer, 10, 0, 0));
+        }
+        println();
     }
 }
 
@@ -5110,36 +5110,36 @@ void fct_sllv() {
         printRegister(rt);
         print((int*) ",");
         printRegister(rs);
-        if(interpret) {
-           print((int*) ": ");
-           printRegister(rd);
-           print((int*) "=");
-           print(itoa(*(registers+rd), string_buffer, 10, 0, 0));
-           print((int*) ",");
-           printRegister(rt);
-           print((int*) "=");
-           print(itoa(*(registers+rt), string_buffer, 10, 0, 0));
-           print((int*) ",");
-           printRegister(rs);
-           print((int*) "=");
-           print(itoa(*(registers+rs), string_buffer, 10, 0, 0));
-        }		
+        if (interpret) {
+            print((int*) ": ");
+            printRegister(rd);
+            print((int*) "=");
+            print(itoa(*(registers+rd), string_buffer, 10, 0, 0));
+            print((int*) ",");
+            printRegister(rt);
+            print((int*) "=");
+            print(itoa(*(registers+rt), string_buffer, 10, 0, 0));
+            print((int*) ",");
+            printRegister(rs);
+            print((int*) "=");
+            print(itoa(*(registers+rs), string_buffer, 10, 0, 0));
+        }
     }
-	
-    if(interpret) {
-       *(registers+rd) = leftShift(*(registers+rt), *(registers+rs));
-		
-       pc = pc + WORDSIZE;
+
+    if (interpret) {
+        *(registers+rd) = leftShift(*(registers+rt), *(registers+rs));
+
+        pc = pc + WORDSIZE;
     }
-	
-    if(debug) { 
-       if(interpret) {
-          print((int*) " -> ");
-          printRegister(rd);
-          print((int*) "=");
-          print(itoa(*(registers+rd), string_buffer, 10, 0, 0));
-       }
-       println();
+
+    if (debug) { 
+        if (interpret) {
+            print((int*) " -> ");
+            printRegister(rd);
+            print((int*) "=");
+            print(itoa(*(registers+rd), string_buffer, 10, 0, 0));
+        }
+        println();
     }
 }
 
@@ -5152,36 +5152,36 @@ void fct_srlv() {
         printRegister(rt);
         print((int*) ",");
         printRegister(rs);
-        if(interpret) {
-           print((int*) ": ");
-           printRegister(rd);
-           print((int*) "=");
-           print(itoa(*(registers+rd), string_buffer, 10, 0, 0));
-           print((int*) ",");
-           printRegister(rt);
-           print((int*) "=");
-           print(itoa(*(registers+rt), string_buffer, 10, 0, 0));
-           print((int*) ",");
-           printRegister(rs);
-           print((int*) "=");
-           print(itoa(*(registers+rs), string_buffer, 10, 0, 0));
-        }		
+        if (interpret) {
+            print((int*) ": ");
+            printRegister(rd);
+            print((int*) "=");
+            print(itoa(*(registers+rd), string_buffer, 10, 0, 0));
+            print((int*) ",");
+            printRegister(rt);
+            print((int*) "=");
+            print(itoa(*(registers+rt), string_buffer, 10, 0, 0));
+            print((int*) ",");
+            printRegister(rs);
+            print((int*) "=");
+            print(itoa(*(registers+rs), string_buffer, 10, 0, 0));
+        }
     }
-	
-    if(interpret) {
-       *(registers+rd) = rightShift(*(registers+rt), *(registers+rs));
-		
-       pc = pc + WORDSIZE;
+
+    if (interpret) {
+        *(registers+rd) = rightShift(*(registers+rt), *(registers+rs));
+
+        pc = pc + WORDSIZE;
     }
-	
-    if(debug) { 
-       if(interpret) {
-          print((int*) " -> ");
-          printRegister(rd);
-          print((int*) "=");
-          print(itoa(*(registers+rd), string_buffer, 10, 0, 0));
-       }
-       println();
+
+    if (debug) { 
+        if (interpret) {
+            print((int*) " -> ");
+            printRegister(rd);
+            print((int*) "=");
+            print(itoa(*(registers+rd), string_buffer, 10, 0, 0));
+        }
+        println();
     }
 }
 

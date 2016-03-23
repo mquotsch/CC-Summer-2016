@@ -883,7 +883,6 @@ void initMemory(int bytes) {
 // -----------------------------------------------------------------
 
 void fct_syscall();
-void fct_nop();
 void fct_sll();
 void fct_srl();
 void fct_sllv();
@@ -5015,51 +5014,53 @@ void fct_syscall() {
     }
 }
 
-void fct_nop() {
-    if (debug) {
-        printFunction(function);
-        println();
+void fct_sll() {
+    if (shamt == 0) {
+        if (debug) {
+            printFunction(function);
+            println();
+        }
+
+        if (interpret)
+            pc = pc + WORDSIZE;    
     }
 
-    if (interpret)
-        pc = pc + WORDSIZE;
-}
-
-void fct_sll() {
-    if (debug) {
-        printFunction(function);
-        print((int*) " ");
-        printRegister(rd);
-        print((int*) ",");
-        printRegister(rt);
-        print((int*) ",");
-        print(itoa(immediate, string_buffer, 10, 0, 0));
-        if (interpret) {
-            print((int*) ": ");
+    else {
+        if (debug) {
+            printFunction(function);
+            print((int*) " ");
             printRegister(rd);
-            print((int*) "=");
-            print(itoa(*(registers+rd), string_buffer, 10, 0, 0));
             print((int*) ",");
             printRegister(rt);
-            print((int*) "=");
-            print(itoa(*(registers+rt), string_buffer, 10, 0, 0));
+            print((int*) ",");
+            print(itoa(immediate, string_buffer, 10, 0, 0));
+            if (interpret) {
+                print((int*) ": ");
+                printRegister(rd);
+                print((int*) "=");
+                print(itoa(*(registers+rd), string_buffer, 10, 0, 0));
+                print((int*) ",");
+                printRegister(rt);
+                print((int*) "=");
+                print(itoa(*(registers+rt), string_buffer, 10, 0, 0));
+            }
         }
-    }
 
-    if (interpret) {
-        *(registers+rd) = leftShift(*(registers+rt), immediate);
-
-        pc = pc + WORDSIZE;
-    }
-
-    if (debug) { 
         if (interpret) {
-            print((int*) " -> ");
-            printRegister(rd);
-            print((int*) "=");
-            print(itoa(*(registers+rd), string_buffer, 10, 0, 0));
+            *(registers+rd) = leftShift(*(registers+rt), immediate);
+
+            pc = pc + WORDSIZE;
         }
-        println();
+
+        if (debug) { 
+            if (interpret) {
+                print((int*) " -> ");
+                printRegister(rd);
+                print((int*) "=");
+                print(itoa(*(registers+rd), string_buffer, 10, 0, 0));
+            }
+            println();
+        }
     }
 }
 
@@ -5882,7 +5883,15 @@ void execute() {
 
     if (opcode == OP_SPECIAL) {
         if (function == FCT_NOP)
-            fct_nop();
+            fct_sll();
+        else if (function == FCT_SLL)
+            fct_sll();
+        else if (function == FCT_SRL)
+            fct_srl();
+        else if (function == FCT_SLLV)
+            fct_sllv();
+        else if (function == FCT_SRLV)
+            fct_srlv();
         else if (function == FCT_ADDU)
             fct_addu();
         else if (function == FCT_SUBU)

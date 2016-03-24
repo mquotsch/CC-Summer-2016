@@ -269,6 +269,8 @@ int SYM_NOTEQ        = 24; // !=
 int SYM_MOD          = 25; // %
 int SYM_CHARACTER    = 26; // character
 int SYM_STRING       = 27; // string
+int SYM_LSHIFT       = 28; // <<
+int SYM_RSHIFT       = 29; // >> 
 
 int *SYMBOLS; // array of strings representing symbols
 
@@ -300,7 +302,7 @@ int sourceFD    = 0;        // file descriptor of open source file
 // ------------------------- INITIALIZATION ------------------------
 
 void initScanner () {
-    SYMBOLS = malloc(28 * SIZEOFINTSTAR);
+    SYMBOLS = malloc(30 * SIZEOFINTSTAR);
 
     *(SYMBOLS + SYM_IDENTIFIER)   = (int) "identifier";
     *(SYMBOLS + SYM_INTEGER)      = (int) "integer";
@@ -330,6 +332,8 @@ void initScanner () {
     *(SYMBOLS + SYM_MOD)          = (int) "%";
     *(SYMBOLS + SYM_CHARACTER)    = (int) "character";
     *(SYMBOLS + SYM_STRING)       = (int) "string";
+    *(SYMBOLS + SYM_LSHIFT)       = (int) "<<";
+    *(SYMBOLS + SYM_RSHIFT)       = (int) ">>";
 
     character = CHAR_EOF;
     symbol    = SYM_EOF;
@@ -1887,6 +1891,10 @@ int getSymbol() {
             getCharacter();
 
             symbol = SYM_LEQ;
+        } else if (character == CHAR_LT) {
+            getCharacter();
+
+            symbol = SYM_LSHIFT;
         } else
             symbol = SYM_LT;
 
@@ -1897,6 +1905,10 @@ int getSymbol() {
             getCharacter();
 
             symbol = SYM_GEQ;
+        } else if (character == CHAR_GT) {
+            getCharacter();
+
+            symbol = SYM_RSHIFT;
         } else
             symbol = SYM_GT;
 
@@ -2107,6 +2119,15 @@ int isComparison() {
     else if (symbol == SYM_GEQ)
         return 1;
     else
+        return 0;
+}
+
+int isShift() {
+    if (symbol == SYM_LSHIFT)
+        return 1; 
+    else if (symbol == SYM_RSHIFT)
+        return 1; 
+    else 
         return 0;
 }
 
@@ -3696,6 +3717,23 @@ int encodeRFormat(int opcode, int rs, int rt, int rd, int function) {
     // assert: 0 <= rd < 2^5
     // assert: 0 <= function < 2^6
     return leftShift(leftShift(leftShift(leftShift(opcode, 5) + rs, 5) + rt, 5) + rd, 11) + function;
+}
+
+// -----------------------------------------------------------------
+// 32 bit
+//
+// +------+-----+-----+-----+-----+------+
+// |opcode|  rs |  rt |  rd |shamt|fction|
+// +------+-----+-----+-----+-----+------+
+//    6      5     5     5     5     6
+int encodeR2Format(int opcode, int rs, int rt, int rd, int shamt, int function) {
+    // assert: 0 <= opcode < 2^6
+    // assert: 0 <= rs < 2^5
+    // assert: 0 <= rt < 2^5
+    // assert: 0 <= rd < 2^5
+    // assert: 0 <= shamt < 2^5
+    // assert: 0 <= function < 2^6
+    return leftShift(leftShift(leftShift(leftShift(leftShift(opcode, 5) + rs, 5) + rt, 5) + rd, 5) + shamt, 6) + function;
 }
 
 // -----------------------------------------------------------------

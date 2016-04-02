@@ -2801,7 +2801,7 @@ int gr_simpleExpression() {
     return ltype;
 }
 
-int gr_expression() {
+int gr_shiftExpression() {
     int ltype;
     int operatorSymbol;
     int rtype;
@@ -2811,6 +2811,48 @@ int gr_expression() {
     ltype = gr_simpleExpression();
 
     // assert: allocatedTemporaries == n + 1
+    
+    // << or >>?
+    if (isShift()) {
+        operatorSymbol = symbol;
+
+        getSymbol();
+
+        rtype = gr_simpleExpression();
+
+        // assert: allocatedTemporaries == n + 2
+
+        if (ltype == INTSTAR_T)
+             typeWarning(INT_T, ltype);
+        if (rtype == INTSTAR_T)
+             typeWarning(INT_T, rtype);
+
+        if (operatorSymbol == SYM_LSHIFT) {
+            emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SLLV);
+
+        } else if (operatorSymbol == SYM_RSHIFT) {
+            emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SRLV);
+
+        }
+
+        tfree(1);
+    }
+
+    // assert: allocatedTemporaries == n + 1
+
+    return ltype;
+}
+
+int gr_expression() {
+    int ltype;
+    int operatorSymbol;
+    int rtype;
+
+    // assert: n = allocatedTemporaries
+
+    ltype = gr_shiftExpression();
+
+    // assert: allocatedTemporaries == n + 1
 
     //optional: ==, !=, <, >, <=, >= simpleExpression
     if (isComparison()) {
@@ -2818,7 +2860,7 @@ int gr_expression() {
 
         getSymbol();
 
-        rtype = gr_simpleExpression();
+        rtype = gr_shiftExpression();
 
         // assert: allocatedTemporaries == n + 2
 

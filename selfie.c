@@ -672,7 +672,6 @@ void initDecoder() {
 
     FUNCTIONS = malloc(43 * SIZEOFINTSTAR);
 
-    *(FUNCTIONS + FCT_NOP)     = (int) "sll";
     *(FUNCTIONS + FCT_SLL)     = (int) "sll"; 
     *(FUNCTIONS + FCT_SRL)     = (int) "srl";
     *(FUNCTIONS + FCT_SLLV)    = (int) "sllv";
@@ -5095,7 +5094,7 @@ void fct_syscall() {
 }
 
 void fct_sll() {
-    if (shamt == 0) {
+    if (immediate == 0) {
         if (debug) {
             printFunction(function);
             println();
@@ -6686,6 +6685,9 @@ int selfie(int argc, int* argv) {
 }
 
 int main(int argc, int *argv) {
+    int x;
+    int y;
+
     initLibrary();
 
     initScanner();
@@ -6708,5 +6710,20 @@ int main(int argc, int *argv) {
         print((int*) ": usage: selfie { -c source | -o binary | -s assembly | -l binary } [ -m size ... | -d size ... | -y size ... ] ");
         println();
     }
+
+    x = 16;
+    y = 2;
+
+    print((int*) "Correct shift:");
+    println();
+    if (x << y == 64){
+        print((int*) "<< correct!");
+        println();
+    }
+    if (x >> y == 4){
+        print((int*) ">> correct!");
+        println();
+    }
+
     return 0;
 }

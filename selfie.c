@@ -463,6 +463,7 @@ int  gr_call(int *procedure);
 int  gr_factor();
 int  gr_term();
 int  gr_simpleExpression();
+int  gr_shiftExpression();
 int  gr_expression();
 void gr_while();
 void gr_if();
@@ -2531,7 +2532,7 @@ int gr_call(int *procedure) {
     return type;
 }
 
-int gr_factor() {
+int gr_factor(int* attribute) {
     int hasCast;
     int cast;
     int type;
@@ -2684,7 +2685,7 @@ int gr_factor() {
         return type;
 }
 
-int gr_term() {
+int gr_term(int *attribute) {
     int ltype;
     int operatorSymbol;
     int rtype;
@@ -2729,7 +2730,7 @@ int gr_term() {
     return ltype;
 }
 
-int gr_simpleExpression() {
+int gr_simpleExpression(int *attribute) {
     int sign;
     int ltype;
     int operatorSymbol;
@@ -2807,7 +2808,7 @@ int gr_simpleExpression() {
     return ltype;
 }
 
-int gr_shiftExpression() {
+int gr_shiftExpression(int *attribute) {
     int ltype;
     int operatorSymbol;
     int rtype;
@@ -2853,6 +2854,10 @@ int gr_expression() {
     int ltype;
     int operatorSymbol;
     int rtype;
+    int *attribute;
+    
+    // initialisation of the attribute
+    attribute = malloc(2 * SIZEOFINT);
 
     // assert: n = allocatedTemporaries
 

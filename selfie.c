@@ -462,10 +462,10 @@ void help_procedure_prologue(int localVariables);
 void help_procedure_epilogue(int parameters);
 
 int  gr_call(int* procedure);
-int  gr_factor();
-int  gr_term();
-int  gr_simpleExpression();
-int  gr_shiftExpression();
+int  gr_factor(int* attribute);
+int  gr_term(int* attribute);
+int  gr_simpleExpression(int* attribute);
+int  gr_shiftExpression(int* attribute);
 int  gr_expression();
 void gr_while();
 void gr_if();
@@ -2710,7 +2710,7 @@ int gr_term(int* attribute) {
 
   // assert: n = allocatedTemporaries
 
-  ltype = gr_factor();
+  ltype = gr_factor(attribute);
 
   // assert: allocatedTemporaries == n + 1
 
@@ -2720,7 +2720,7 @@ int gr_term(int* attribute) {
 
     getSymbol();
 
-    rtype = gr_factor();
+    rtype = gr_factor(attribute);
 
     // assert: allocatedTemporaries == n + 2
 
@@ -2758,7 +2758,7 @@ int gr_simpleExpression(int* attribute) {
   int  leftIsVar;
 
   tempOperatorSymbol = -1;
-  *tempAttribute = malloc(2 * SIZEOFINT);
+  tempAttribute = malloc(2 * SIZEOFINT);
 
   // assert: n = allocatedTemporaries
 
@@ -2931,7 +2931,7 @@ int gr_shiftExpression(int* attribute) {
 
   // assert: n = allocatedTemporaries
 
-  ltype = gr_simpleExpression();
+  ltype = gr_simpleExpression(attribute);
 
   // assert: allocatedTemporaries == n + 1
 
@@ -2941,7 +2941,7 @@ int gr_shiftExpression(int* attribute) {
 
     getSymbol();
 
-    rtype = gr_simpleExpression();
+    rtype = gr_simpleExpression(attribute);
 
     // assert: allocatedTemporaries == n + 2
 
@@ -2977,7 +2977,7 @@ int gr_expression() {
 
   // assert: n = allocatedTemporaries
 
-  ltype = gr_shiftExpression();
+  ltype = gr_shiftExpression(attribute);
 
   // assert: allocatedTemporaries == n + 1
 
@@ -2987,7 +2987,7 @@ int gr_expression() {
 
     getSymbol();
 
-    rtype = gr_shiftExpression();
+    rtype = gr_shiftExpression(attribute);
 
     // assert: allocatedTemporaries == n + 2
 

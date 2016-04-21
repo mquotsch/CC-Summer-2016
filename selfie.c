@@ -728,7 +728,8 @@ void selfie_load();
 
 // ------------------------ GLOBAL CONSTANTS -----------------------
 
-int maxBinaryLength = 131072; // 128KB
+//int maxBinaryLength = 131072; // 128KB
+int maxBinaryLength = 262144; // 256KB
 
 // ------------------------ GLOBAL VARIABLES -----------------------
 
@@ -2707,12 +2708,25 @@ int gr_term(int* attribute) {
   int ltype;
   int operatorSymbol;
   int rtype;
+  int tempAttribute;
+  int tempAttributeType;
+  int tempOperatorSymbol;
+  int leftIsVar;
+  int isConstant;
+
+  tempOperatorSymbol = -1;
+  isConstant = 1;
 
   // assert: n = allocatedTemporaries
 
   ltype = gr_factor(attribute);
 
   // assert: allocatedTemporaries == n + 1
+  
+  if (*(attribute + 1) != CONSTANT){
+    leftIsVar = 1;
+    isConstant = 0;
+  }
 
   // * / or % ?
   while (isStarOrDivOrModulo()) {
@@ -2720,28 +2734,136 @@ int gr_term(int* attribute) {
 
     getSymbol();
 
+    tempAttribute = *attribute;
+    tempAttributeType = *(attribute + 1);
     rtype = gr_factor(attribute);
 
     // assert: allocatedTemporaries == n + 2
+    
+    if (*(attribute + 1) != CONSTANT) {
+      isConstant = 0;
+      if (ltype != rtype)
+        typeWarning(ltype, rtype);
+      if (tempAttributeType) {
+          
+        if (operatorSymbol == SYM_ASTERISK) {
+          emitRFormat(OP_SPECIAL, tempAttribute, currentTemporary(), 0, FCT_MULTU);
+          emitRFormat(OP_SPECIAL, 0, 0, currentTemporary(), FCT_MFLO);
 
-    if (ltype != rtype)
-      typeWarning(ltype, rtype);
+        } else if (operatorSymbol == SYM_DIV) {
+          emitRFormat(OP_SPECIAL, tempAttribute, currentTemporary(), 0, FCT_DIVU);
+          emitRFormat(OP_SPECIAL, 0, 0, currentTemporary(), FCT_MFLO);
 
-    if (operatorSymbol == SYM_ASTERISK) {
-      emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_MULTU);
-      emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
+        } else if (operatorSymbol == SYM_MOD) {
+          emitRFormat(OP_SPECIAL, tempAttribute, currentTemporary(), 0, FCT_DIVU);
+          emitRFormat(OP_SPECIAL, 0, 0, currentTemporary(), FCT_MFHI);
+        }
+      } else {
+          if (operatorSymbol == SYM_ASTERISK) {
+            emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_MULTU);
+            emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
 
-    } else if (operatorSymbol == SYM_DIV) {
-      emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_DIVU);
-      emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
+          } else if (operatorSymbol == SYM_DIV) {
+            emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_DIVU);
+            emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
 
-    } else if (operatorSymbol == SYM_MOD) {
-      emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_DIVU);
-      emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFHI);
+          } else if (operatorSymbol == SYM_MOD) {
+            emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_DIVU);
+            emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFHI);
+          }
+
+          tfree(1);
+        }
+    } else {
+      if (tempAttributeType) {
+        if (operatorSymbol == SYM_ASTERISK) {
+          *attribute = tempAttribute * *attribute;
+        } else if (operatorSymbol == SYM_DIV) {
+          *attribute = tempAttribute / *attribute;
+        } else if (operatorSymbol == SYM_MOD) {
+          *attribute = tempAttribute % *attribute;
+        }
+      }
+
+      while (logicalAnd(isStarOrDivOrModulo(), (*(attribute + 1)))) {
+        tempOperatorSymbol = symbol;
+        getSymbol();
+        tempAttribute = *attribute;
+        tempAttributeType = *(attribute + 1);
+        rtype = gr_term(attribute);
+        if (*(attribute + 1)) {
+          if (tempOperatorSymbol == SYM_ASTERISK) {
+            *attribute = tempAttribute * *attribute;
+          } else if (tempOperatorSymbol == SYM_DIV) {
+            *attribute = tempAttribute / *attribute;
+          } else if (tempOperatorSymbol == SYM_MOD) {
+            *attribute = tempAttribute % *attribute;
+          }
+        }
+      }
+
+      if(leftIsVar) {
+        if (ltype != rtype)
+          typeWarning(ltype, rtype);
+        if (operatorSymbol == SYM_ASTERISK) {
+          if(*(attribute + 1)){
+            emitRFormat(OP_SPECIAL, currentTemporary(), *attribute, 0, FCT_MULTU);
+            emitRFormat(OP_SPECIAL, 0, 0, currentTemporary(), FCT_MFLO);
+          }
+          else {
+            emitRFormat(OP_SPECIAL, previousTemporary(), *attribute, 0, FCT_MULTU);
+            emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
+          }
+
+        } else if (operatorSymbol == SYM_DIV) {
+          if(*(attribute + 1)){
+            emitRFormat(OP_SPECIAL, currentTemporary(), *attribute, 0, FCT_DIVU);
+            emitRFormat(OP_SPECIAL, 0, 0, currentTemporary(), FCT_MFLO);
+          }
+          else {
+            emitRFormat(OP_SPECIAL, previousTemporary(), *attribute, 0, FCT_DIVU);
+            emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
+          }
+
+        } else if (operatorSymbol == SYM_MOD) {
+          if(*(attribute + 1)){
+            emitRFormat(OP_SPECIAL, currentTemporary(), *attribute, 0, FCT_DIVU);
+            emitRFormat(OP_SPECIAL, 0, 0, currentTemporary(), FCT_MFHI);
+          }
+            emitRFormat(OP_SPECIAL, previousTemporary(), *attribute, 0, FCT_DIVU);
+            emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFHI);
+        }
+      }
+      else if(*(attribute + 1) != CONSTANT) {
+        load_integer(tempAttribute);
+        leftIsVar = 1;
+        isConstant = 0;
+      }
+
+      operatorSymbol = symbol;
+
+      if (ltype != rtype)
+        typeWarning(ltype, rtype);
+
+      if (operatorSymbol == SYM_ASTERISK) {
+        emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), 0, FCT_MULTU);
+        emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
+        tfree(1);
+
+      } else if (operatorSymbol == SYM_DIV) {
+        emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), 0, FCT_DIVU);
+        emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
+        tfree(1);
+
+      } else if (operatorSymbol == SYM_MOD) {
+        emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), 0, FCT_DIVU);
+        emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFHI);
+        tfree(1);
+      }
     }
-
-    tfree(1);
   }
+  if(isConstant == 0)
+    *(attribute + 1) = 0;
 
   // assert: allocatedTemporaries == n + 1
 
@@ -2749,16 +2871,18 @@ int gr_term(int* attribute) {
 }
 
 int gr_simpleExpression(int* attribute) {
-  int  sign;
-  int  ltype;
-  int  operatorSymbol;
-  int  rtype;
-  int* tempAttribute;
-  int  tempOperatorSymbol;
-  int  leftIsVar;
+  int sign;
+  int ltype;
+  int operatorSymbol;
+  int rtype;
+  int tempAttribute;
+  int tempAttributeType;
+  int tempOperatorSymbol;
+  int leftIsVar;
+  int isConstant;
 
   tempOperatorSymbol = -1;
-  tempAttribute = malloc(2 * SIZEOFINT);
+  isConstant = 1;
 
   // assert: n = allocatedTemporaries
 
@@ -2793,12 +2917,17 @@ int gr_simpleExpression(int* attribute) {
 
       ltype = INT_T;
     }
-
-    emitRFormat(OP_SPECIAL, REG_ZR, currentTemporary(), currentTemporary(), FCT_SUBU);
+    if (*(attribute + 1)) {
+      *attribute = -(*attribute);
+    } else {
+      emitRFormat(OP_SPECIAL, REG_ZR, currentTemporary(), currentTemporary(), FCT_SUBU);
+    }
   }
 
-  if (*(attribute + 1) != CONSTANT)
+  if (*(attribute + 1) != CONSTANT) {
     leftIsVar = 1;
+    isConstant = 0;
+  }
 
   // + or -?
   while (isPlusOrMinus()) {
@@ -2806,14 +2935,15 @@ int gr_simpleExpression(int* attribute) {
 
     getSymbol();
 
-    *tempAttribute = *attribute;
-    *(tempAttribute + 1) = *(attribute + 1);
+    tempAttribute = *attribute;
+    tempAttributeType = *(attribute + 1);
     rtype = gr_term(attribute);
 
     // assert: allocatedTemporaries == n + 2
 
     if (*(attribute + 1) != CONSTANT) {
-      if (*(tempAttribute + 1) == CONSTANT) {
+      isConstant = 0;
+      if (tempAttributeType) {
         if (operatorSymbol == SYM_PLUS) {
           if (ltype == INTSTAR_T) {
             if (rtype == INT_T)
@@ -2822,13 +2952,13 @@ int gr_simpleExpression(int* attribute) {
           } else if (rtype == INTSTAR_T)
             typeWarning(ltype, rtype);
 
-          emitRFormat(OP_SPECIAL, currentTemporary(), *tempAttribute, currentTemporary(), FCT_ADDU);
+          emitRFormat(OP_SPECIAL, currentTemporary(), tempAttribute, currentTemporary(), FCT_ADDU);
 
         } else if (operatorSymbol == SYM_MINUS) {
           if (ltype != rtype)
             typeWarning(ltype, rtype);
 
-          emitRFormat(OP_SPECIAL, currentTemporary(), *tempAttribute, currentTemporary(), FCT_SUBU);
+          emitRFormat(OP_SPECIAL, currentTemporary(), tempAttribute, currentTemporary(), FCT_SUBU);
         }
       } else {
         if (operatorSymbol == SYM_PLUS) {
@@ -2851,31 +2981,31 @@ int gr_simpleExpression(int* attribute) {
         tfree(1);
       }
     } else {
-      if (*(tempAttribute + 1) == CONSTANT) {
+      if (tempAttributeType) {
         if (operatorSymbol == SYM_PLUS) {
-          *attribute = *tempAttribute + *attribute;
+          *attribute = tempAttribute + *attribute;
         } else if (operatorSymbol == SYM_MINUS) {
-          *attribute = *tempAttribute - *attribute;
+          *attribute = tempAttribute - *attribute;
         }
       }
 
-      while (logicalAnd(isPlusOrMinus(), (*(attribute + 1) == CONSTANT))) {
+      while (logicalAnd(isPlusOrMinus(), (*(attribute + 1)))) {
         tempOperatorSymbol = symbol;
         getSymbol();
-        *tempAttribute = *attribute;
-        *(tempAttribute + 1) = *(attribute + 1);
+        tempAttribute = *attribute;
+        tempAttributeType = *(attribute + 1);
         rtype = gr_term(attribute);
-        if (*(attribute + 1) == CONSTANT) {
+        if (*(attribute + 1)) {
           if (tempOperatorSymbol == SYM_PLUS) {
-            *attribute = *attribute + *tempAttribute;
+            *attribute = tempAttribute + *attribute;
           }
           else if (tempOperatorSymbol == SYM_MINUS) {
-            *attribute = *attribute + *tempAttribute;
+            *attribute = tempAttribute - *attribute;
           }
         }
       }
 
-      if(leftIsVar) {
+      if (leftIsVar) {
         if (operatorSymbol == SYM_PLUS) {
           if (ltype == INTSTAR_T) {
             if (rtype == INT_T)
@@ -2883,20 +3013,28 @@ int gr_simpleExpression(int* attribute) {
               emitLeftShiftBy(2);
           } else if (rtype == INTSTAR_T)
             typeWarning(ltype, rtype);
-
+          if(*(attribute + 1))
+          emitRFormat(OP_SPECIAL, currentTemporary(), *attribute, currentTemporary(), FCT_ADDU);
+          else
           emitRFormat(OP_SPECIAL, previousTemporary(), *attribute, previousTemporary(), FCT_ADDU);
 
         } else if (operatorSymbol == SYM_MINUS) {
           if (ltype != rtype)
             typeWarning(ltype, rtype);
 
+          if(*(attribute + 1))
+          emitRFormat(OP_SPECIAL, currentTemporary(), *attribute, currentTemporary(), FCT_SUBU);
+          else
           emitRFormat(OP_SPECIAL, previousTemporary(), *attribute, previousTemporary(), FCT_SUBU);
         }
       }
-      else
-        load_integer(*attribute);
+      else if(*(attribute + 1) != CONSTANT){
+        load_integer(tempAttribute);
+        leftIsVar = 1;
+        isConstant = 0;
+      }
 
-      operatorSymbol = tempOperatorSymbol;
+      operatorSymbol = symbol;
 
       if (operatorSymbol == SYM_PLUS) {
         if (ltype == INTSTAR_T) {
@@ -2918,6 +3056,8 @@ int gr_simpleExpression(int* attribute) {
       }
     }
   }
+  if(isConstant == 0)
+    *(attribute + 1) = 0;
 
   // assert: allocatedTemporaries == n + 1
 
@@ -2978,6 +3118,9 @@ int gr_expression() {
   // assert: n = allocatedTemporaries
 
   ltype = gr_shiftExpression(attribute);
+  
+  if (*(attribute + 1) == CONSTANT)
+    load_integer(*attribute);
 
   // assert: allocatedTemporaries == n + 1
 
@@ -2988,6 +3131,9 @@ int gr_expression() {
     getSymbol();
 
     rtype = gr_shiftExpression(attribute);
+    
+    if (*(attribute + 1) == CONSTANT)
+      load_integer(*attribute);
 
     // assert: allocatedTemporaries == n + 2
 

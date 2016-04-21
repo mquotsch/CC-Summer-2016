@@ -2722,7 +2722,7 @@ int gr_term(int* attribute) {
   ltype = gr_factor(attribute);
 
   // assert: allocatedTemporaries == n + 1
-  
+
   if (*(attribute + 1) != CONSTANT){
     leftIsVar = 1;
     isConstant = 0;
@@ -2736,6 +2736,7 @@ int gr_term(int* attribute) {
 
     tempAttribute = *attribute;
     tempAttributeType = *(attribute + 1);
+
     rtype = gr_factor(attribute);
 
     // assert: allocatedTemporaries == n + 2

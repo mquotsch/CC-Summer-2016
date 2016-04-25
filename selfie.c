@@ -2231,6 +2231,16 @@ int previousTemporary() {
   }
 }
 
+int secondPreviousTemporary() {
+  if (allocatedTemporaries > 1)
+    return currentTemporary() - 2;
+  else {
+    syntaxErrorMessage((int*) "illegal register access");
+
+    exit(-1);
+  }
+}
+
 int nextTemporary() {
   if (allocatedTemporaries < REG_T7 - REG_A3)
     return currentTemporary() + 1;
@@ -2749,20 +2759,24 @@ int gr_term(int *attribute) {
         if (ltype != rtype)
         typeWarning(ltype, rtype);
 
+        load_integer(lTempValue);
+
         if (operatorSymbol == SYM_ASTERISK) {
-          emitRFormat(OP_SPECIAL, lTempValue, currentTemporary(), 0, FCT_MULTU);
-          emitRFormat(OP_SPECIAL, 0, 0, currentTemporary(), FCT_MFLO);
+          emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), 0, FCT_MULTU);
+          emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
 
         } else if (operatorSymbol == SYM_DIV) {
-          emitRFormat(OP_SPECIAL, lTempValue, currentTemporary(), 0, FCT_DIVU);
-          emitRFormat(OP_SPECIAL, 0, 0, currentTemporary(), FCT_MFLO);
+          emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), 0, FCT_DIVU);
+          emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
 
         } else if (operatorSymbol == SYM_MOD) {
-          emitRFormat(OP_SPECIAL, lTempValue, currentTemporary(), 0, FCT_DIVU);
-          emitRFormat(OP_SPECIAL, 0, 0, currentTemporary(), FCT_MFHI);
+          emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), 0, FCT_DIVU);
+          emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFHI);
         }
+        tfree(1);
         lTempFlag = 0;
       }
+
     // variable [operator] factor
     } else {
       if (rTempFlag == 0) {
@@ -2798,26 +2812,33 @@ int gr_term(int *attribute) {
             }
           }
         }
+
+        // laod the folded values
+        load_integer(rTempValue);
+
+        // variable  [operator]  folded values
         if (*(attribute + 1))
-          tempReg = currentTemporary();
-        else
           tempReg = previousTemporary();
+        // variable  [operator]  folded values  [operator]  variable
+        else
+          tempReg = secondPreviousTemporary();
 
         if (ltype != INT_T)
           typeWarning(ltype, INT_T);
 
         if (operatorSymbol == SYM_ASTERISK) {
-          emitRFormat(OP_SPECIAL, tempReg, rTempValue, 0, FCT_MULTU);
-          emitRFormat(OP_SPECIAL, 0, 0, tempReg, FCT_MFLO); // hana: überprung machen ob curr oder prev und wenn prev dann free?
+          emitRFormat(OP_SPECIAL, tempReg, currentTemporary(), 0, FCT_MULTU);
+          emitRFormat(OP_SPECIAL, 0, 0, tempReg, FCT_MFLO);
 
         } else if (operatorSymbol == SYM_DIV) {
-          emitRFormat(OP_SPECIAL, tempReg, rTempValue, 0, FCT_DIVU);
+          emitRFormat(OP_SPECIAL, tempReg, currentTemporary(), 0, FCT_DIVU);
           emitRFormat(OP_SPECIAL, 0, 0, tempReg, FCT_MFLO);
 
         } else if (operatorSymbol == SYM_MOD) {
-          emitRFormat(OP_SPECIAL, tempReg, rTempValue, 0, FCT_DIVU);
+          emitRFormat(OP_SPECIAL, tempReg, currentTemporary(), 0, FCT_DIVU);
           emitRFormat(OP_SPECIAL, 0, 0, tempReg, FCT_MFHI);
         }
+        tfree(1);
         
         if (*(attribute + 1) == 0){
           operatorSymbol = tempOperatorSymbol;
@@ -2890,12 +2911,6 @@ int gr_simpleExpression(int* attribute) {
   // assert: allocatedTemporaries == n + 1
 
   if (sign) {
-    if (ltype != INT_T) {
-      typeWarning(INT_T, ltype);
-
-      ltype = INT_T;
-    }
-
     if (*(attribute + 1) == 0) {
       emitRFormat(OP_SPECIAL, REG_ZR, currentTemporary(), currentTemporary(), FCT_SUBU);
     } else {
@@ -2929,30 +2944,26 @@ int gr_simpleExpression(int* attribute) {
         }
         *attribute = lTempValue;
       } else {
-        if (ltype != rtype)
-          typeWarning(ltype, rtype);
-
         if (operatorSymbol == SYM_PLUS) {
-          emitRFormat(OP_SPECIAL, lTempValue, currentTemporary(), currentTemporary(), FCT_ADDU);
+          load_integer(lTempValue);
+          emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_ADDU);
         } else if (operatorSymbol == SYM_MINUS) {
-          emitRFormat(OP_SPECIAL, lTempValue, currentTemporary(), currentTemporary(), FCT_SUBU);
+          load_integer(lTempValue);
+          emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SUBU);
         }
         lTempFlag = 0;
+        tfree(1);
       }
     // variable [operator] factor
     } else {
       if (rTempFlag == 0) {
-        if (ltype != rtype)
-          typeWarning(ltype, rtype);
-
         if (operatorSymbol == SYM_PLUS) {
           emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_ADDU);
-
         } else if (operatorSymbol == SYM_MINUS) {
           emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SUBU);
         }
         tfree(1);
-      } else { // hana
+      } else {
         while (logicalAnd(isPlusOrMinus(), *(attribute + 1))) {
           tempOperatorSymbol = symbol;
           getSymbol();
@@ -2965,25 +2976,26 @@ int gr_simpleExpression(int* attribute) {
             }
           }
         }
+        // load folded value into a register
+        load_integer(rTempValue);
 
+        // variable  [operator]  folded values 
         if (*(attribute + 1))
-          tempReg = currentTemporary();
-        else
           tempReg = previousTemporary();
-
-        if (ltype != INT_T)
-          typeWarning(ltype, INT_T);
+        // variable  [operator]  folded values  [operator]  variable
+        else
+          tempReg = secondPreviousTemporary();
 
         if (operatorSymbol == SYM_PLUS) {
-          emitRFormat(OP_SPECIAL, tempReg, rTempValue, tempReg, FCT_ADDU);
+          emitRFormat(OP_SPECIAL, tempReg, currentTemporary(), tempReg, FCT_ADDU);
+          tfree(1);
         } else if (operatorSymbol == SYM_MINUS) {
-          emitRFormat(OP_SPECIAL, tempReg, rTempValue, tempReg, FCT_SUBU);
+          emitRFormat(OP_SPECIAL, tempReg, currentTemporary(), tempReg, FCT_SUBU);
+          tfree(1);
         }
 
         if (*(attribute + 1) == 0){
           operatorSymbol = tempOperatorSymbol;
-          if (ltype != rtype)
-            typeWarning(ltype, rtype);
 
           if (operatorSymbol == SYM_PLUS) {
             emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_ADDU);
@@ -3024,11 +3036,6 @@ int gr_shiftExpression(int* attribute) {
     rtype = gr_simpleExpression(attribute);
 
     // assert: allocatedTemporaries == n + 2
-
-    if (ltype == INTSTAR_T)
-      typeWarning(INT_T, ltype);
-    if (rtype == INTSTAR_T)
-      typeWarning(INT_T, rtype);
 
     if (operatorSymbol == SYM_LSHIFT) {
       emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SLLV);
@@ -6890,6 +6897,10 @@ int selfie(int argc, int* argv) {
 }
 
 int main(int argc, int* argv) {
+  
+  int x;
+  int y;
+  
   initLibrary();
 
   initScanner();
@@ -6906,6 +6917,13 @@ int main(int argc, int* argv) {
 
   print((int*) "This is RSQ Selfie");
   println();
+  
+  x = 1 + 2; 
+  print(itoa(x, string_buffer, 10, 0, 0));
+  println();
+  y = x * 1 * 2;
+  print(itoa(y, string_buffer, 10, 0, 0));
+  println();
 
   if (selfie(argc, (int*) argv) != 0) {
     print(selfieName);
@@ -6915,4 +6933,3 @@ int main(int argc, int* argv) {
 
   return 0;
 }
-

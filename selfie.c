@@ -2757,7 +2757,7 @@ int gr_term(int *attribute) {
         *attribute = lTempValue;
       } else {
         if (ltype != rtype)
-        typeWarning(ltype, rtype);
+          typeWarning(ltype, rtype);
 
         load_integer(lTempValue);
 
@@ -2911,6 +2911,12 @@ int gr_simpleExpression(int* attribute) {
   // assert: allocatedTemporaries == n + 1
 
   if (sign) {
+    if (ltype != INT_T) {
+      typeWarning(INT_T, ltype);
+
+      ltype = INT_T;
+    }
+
     if (*(attribute + 1) == 0) {
       emitRFormat(OP_SPECIAL, REG_ZR, currentTemporary(), currentTemporary(), FCT_SUBU);
     } else {
@@ -2945,9 +2951,15 @@ int gr_simpleExpression(int* attribute) {
         *attribute = lTempValue;
       } else {
         if (operatorSymbol == SYM_PLUS) {
+          if (rtype == INTSTAR_T)
+            typeWarning(ltype, rtype);
+
           load_integer(lTempValue);
           emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_ADDU);
         } else if (operatorSymbol == SYM_MINUS) {
+          if (ltype != rtype)
+            typeWarning(ltype, rtype);
+
           load_integer(lTempValue);
           emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SUBU);
         }
@@ -2987,9 +2999,16 @@ int gr_simpleExpression(int* attribute) {
           tempReg = secondPreviousTemporary();
 
         if (operatorSymbol == SYM_PLUS) {
+          if (ltype == INTSTAR_T)
+            // pointer arithmetic: factor of 2^2 of integer operand
+            emitLeftShiftBy(2);
+
           emitRFormat(OP_SPECIAL, tempReg, currentTemporary(), tempReg, FCT_ADDU);
           tfree(1);
         } else if (operatorSymbol == SYM_MINUS) {
+          if (ltype != INT_T)
+            typeWarning(ltype, rtype);
+            
           emitRFormat(OP_SPECIAL, tempReg, currentTemporary(), tempReg, FCT_SUBU);
           tfree(1);
         }
@@ -2998,8 +3017,18 @@ int gr_simpleExpression(int* attribute) {
           operatorSymbol = tempOperatorSymbol;
 
           if (operatorSymbol == SYM_PLUS) {
+            if (ltype == INTSTAR_T) {
+              if (rtype == INT_T)
+                // pointer arithmetic: factor of 2^2 of integer operand
+                emitLeftShiftBy(2);
+            } else if (rtype == INTSTAR_T)
+              typeWarning(ltype, rtype);
+
             emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_ADDU);
           } else if (operatorSymbol == SYM_MINUS) {
+            if (ltype != rtype)
+              typeWarning(ltype, rtype);
+        
             emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SUBU);
           }
           tfree(1);

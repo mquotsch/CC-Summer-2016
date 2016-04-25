@@ -2970,8 +2970,18 @@ int gr_simpleExpression(int* attribute) {
     } else {
       if (rTempFlag == 0) {
         if (operatorSymbol == SYM_PLUS) {
+          if (ltype == INTSTAR_T) {
+            if (rtype == INT_T)
+              // pointer arithmetic: factor of 2^2 of integer operand
+              emitLeftShiftBy(2);
+          } else if (rtype == INTSTAR_T)
+            typeWarning(ltype, rtype);
+
           emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_ADDU);
         } else if (operatorSymbol == SYM_MINUS) {
+          if (ltype != rtype)
+            typeWarning(ltype, rtype);
+
           emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SUBU);
         }
         tfree(1);
@@ -3008,7 +3018,7 @@ int gr_simpleExpression(int* attribute) {
         } else if (operatorSymbol == SYM_MINUS) {
           if (ltype != INT_T)
             typeWarning(ltype, rtype);
-            
+
           emitRFormat(OP_SPECIAL, tempReg, currentTemporary(), tempReg, FCT_SUBU);
           tfree(1);
         }
@@ -3028,7 +3038,7 @@ int gr_simpleExpression(int* attribute) {
           } else if (operatorSymbol == SYM_MINUS) {
             if (ltype != rtype)
               typeWarning(ltype, rtype);
-        
+
             emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SUBU);
           }
           tfree(1);
@@ -3065,6 +3075,11 @@ int gr_shiftExpression(int* attribute) {
     rtype = gr_simpleExpression(attribute);
 
     // assert: allocatedTemporaries == n + 2
+
+    if (ltype == INTSTAR_T)
+      typeWarning(INT_T, ltype);
+    if (rtype == INTSTAR_T)
+      typeWarning(INT_T, rtype);
 
     if (operatorSymbol == SYM_LSHIFT) {
       emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SLLV);

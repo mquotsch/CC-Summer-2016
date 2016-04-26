@@ -3055,10 +3055,17 @@ int gr_shiftExpression(int* attribute) {
   int ltype;
   int operatorSymbol;
   int rtype;
+  int lTempValue;
+  int lTempFlag;
+  int rTempValue;
+  int rTempFlag;
 
   // assert: n = allocatedTemporaries
 
   ltype = gr_simpleExpression(attribute);
+
+  lTempValue = *attribute;
+  lTempFlag = *(attribute + 1);
 
   // assert: allocatedTemporaries == n + 1
 
@@ -3070,22 +3077,73 @@ int gr_shiftExpression(int* attribute) {
 
     rtype = gr_simpleExpression(attribute);
 
+    rTempValue = *attribute;
+    rTempFlag = *(attribute + 1);
+
     // assert: allocatedTemporaries == n + 2
 
-    if (ltype == INTSTAR_T)
-      typeWarning(INT_T, ltype);
-    if (rtype == INTSTAR_T)
-      typeWarning(INT_T, rtype);
+    // constant [operator] factor
+    if (lTempFlag) {
+      if (rTempFlag) {
+        if (operatorSymbol == SYM_LSHIFT) {
+          lTempValue = lTempValue << rTempValue;
+        } else if (operatorSymbol == SYM_RSHIFT) {
+          lTempValue = lTempValue >> rTempValue;
+        }
+        *attribute = lTempValue;
+      } else {
+        if (operatorSymbol == SYM_LSHIFT) {
+          if (rtype == INTSTAR_T)
+            typeWarning(INT_T, rtype);
 
-    if (operatorSymbol == SYM_LSHIFT) {
-      emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SLLV);
+          load_integer(lTempValue);
+          emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SLLV);
+        } else if (operatorSymbol == SYM_RSHIFT) {
+          if (rtype == INTSTAR_T)
+            typeWarning(INT_T, rtype);
 
-    } else if (operatorSymbol == SYM_RSHIFT) {
-      emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SRLV);
+          load_integer(lTempValue);
+          emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SRLV);
+        }
+        lTempFlag = 0;
+        tfree(1);
+      }
+    // variable [operator] factor
+    } else {
+      if (rTempFlag == 0) {
+        if (ltype == INTSTAR_T)
+          typeWarning(INT_T, ltype);
+        if (rtype == INTSTAR_T)
+          typeWarning(INT_T, rtype);
 
+        if (operatorSymbol == SYM_LSHIFT) {
+          emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SLLV);
+
+        } else if (operatorSymbol == SYM_RSHIFT) {
+          emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SRLV);
+
+        }
+
+        tfree(1);
+      } else {
+        // load folded value into a register
+        load_integer(rTempValue);
+
+        if (ltype == INTSTAR_T)
+          typeWarning(INT_T, ltype);
+
+        if (operatorSymbol == SYM_LSHIFT) {
+          emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SLLV);
+
+        } else if (operatorSymbol == SYM_RSHIFT) {
+          emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SRLV);
+
+        }
+          tfree(1);
+
+          *(attribute + 1) = 0;
+      }
     }
-
-    tfree(1);
   }
 
   // assert: allocatedTemporaries == n + 1

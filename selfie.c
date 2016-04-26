@@ -2617,6 +2617,8 @@ int gr_factor(int* attribute) {
     if (symbol == SYM_IDENTIFIER) {
       type = load_variable(identifier);
 
+      *(attribute + 1) = 0;
+
       getSymbol();
 
     // * "(" expression ")"
@@ -2680,6 +2682,8 @@ int gr_factor(int* attribute) {
 
     emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), literal);
 
+    *(attribute + 1) = 0;
+
     getSymbol();
 
     type = INT_T;
@@ -2687,6 +2691,8 @@ int gr_factor(int* attribute) {
   // string?
   } else if (symbol == SYM_STRING) {
     load_string(string);
+
+    *(attribute + 1) = 0;
 
     getSymbol();
 
@@ -2988,9 +2994,15 @@ int gr_simpleExpression(int* attribute) {
           rtype = gr_term(attribute);
           if (*(attribute + 1)) {
             if (tempOperatorSymbol == SYM_PLUS) {
-              rTempValue = rTempValue + *attribute;
+              if (operatorSymbol == SYM_MINUS)
+                rTempValue = rTempValue - *attribute;
+              else
+                rTempValue = rTempValue + *attribute;
             } else if (tempOperatorSymbol == SYM_MINUS) {
-              rTempValue = rTempValue - *attribute;
+              if (operatorSymbol == SYM_MINUS)
+                rTempValue = rTempValue + *attribute;
+              else
+                rTempValue = rTempValue - *attribute;
             }
           }
         }

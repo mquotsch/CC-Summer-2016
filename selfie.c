@@ -2798,17 +2798,13 @@ int gr_term(int *attribute) {
 
         tfree(1);
       } else {
-        while (logicalAnd(isStarOrDivOrModulo(), *(attribute + 1))) {
+        while (logicalAnd(symbol == SYM_ASTERISK, *(attribute + 1))) {
           tempOperatorSymbol = symbol;
           getSymbol();
           rtype = gr_factor(attribute);
           if (*(attribute + 1)) {
             if (tempOperatorSymbol == SYM_ASTERISK) {
               rTempValue = rTempValue * *attribute;
-            } else if (tempOperatorSymbol == SYM_DIV) {
-              rTempValue = rTempValue / *attribute;
-            } else if (tempOperatorSymbol == SYM_MOD) {
-              rTempValue = rTempValue % *attribute;
             }
           }
         }
@@ -2989,7 +2985,7 @@ int gr_simpleExpression(int* attribute) {
         while (logicalAnd(isPlusOrMinus(), *(attribute + 1))) {
           tempOperatorSymbol = symbol;
           getSymbol();
-          rtype = gr_factor(attribute);
+          rtype = gr_term(attribute);
           if (*(attribute + 1)) {
             if (tempOperatorSymbol == SYM_PLUS) {
               rTempValue = rTempValue + *attribute;
@@ -6962,10 +6958,19 @@ int main(int argc, int* argv) {
   print((int*) "This is RSQ Selfie");
   println();
   
-  x = 1 + 2; 
+  x = 1 + 3;
   print(itoa(x, string_buffer, 10, 0, 0));
   println();
-  y = x * 1 * 2;
+  x = 4 / 2 + 8 / 2;
+  print(itoa(x, string_buffer, 10, 0, 0));
+  println();
+  x = 16 / 2 / 2 / 2 * 2;
+  print(itoa(x, string_buffer, 10, 0, 0));
+  println();
+  y = x + x - x * x + 1;
+  print(itoa(y, string_buffer, 10, 0, 0));
+  println();
+  y = x + 1 * 2 + 3 + 4 * x;
   print(itoa(y, string_buffer, 10, 0, 0));
   println();
 

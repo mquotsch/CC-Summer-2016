@@ -7007,10 +7007,7 @@ int selfie(int argc, int* argv) {
 }
 
 int main(int argc, int* argv) {
-  
-  int x;
-  int y;
-  
+
   initLibrary();
 
   initScanner();
@@ -7026,22 +7023,6 @@ int main(int argc, int* argv) {
   argv = argv + 1;
 
   print((int*) "This is RSQ Selfie");
-  println();
-  
-  x = 1 + 3;
-  print(itoa(x, string_buffer, 10, 0, 0));
-  println();
-  x = 4 / 2 + 8 / 2;
-  print(itoa(x, string_buffer, 10, 0, 0));
-  println();
-  x = 16 / 2 / 2 / 2 * 2;
-  print(itoa(x, string_buffer, 10, 0, 0));
-  println();
-  y = x + x - x * x + 1;
-  print(itoa(y, string_buffer, 10, 0, 0));
-  println();
-  y = x + 1 * 2 + 3 + 4 * x;
-  print(itoa(y, string_buffer, 10, 0, 0));
   println();
 
   if (selfie(argc, (int*) argv) != 0) {

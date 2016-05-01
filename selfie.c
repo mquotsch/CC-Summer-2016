@@ -2596,6 +2596,9 @@ int gr_factor(int* attribute) {
       getSymbol();
   }
 
+  if (symbol != SYM_INTEGER)
+    *(attribute + 1) = 0;
+
   // optional cast: [ cast ]
   if (symbol == SYM_LPARENTHESIS) {
     getSymbol();
@@ -2633,8 +2636,6 @@ int gr_factor(int* attribute) {
     // ["*"] identifier
     if (symbol == SYM_IDENTIFIER) {
       type = load_variable(identifier);
-
-      *(attribute + 1) = 0;
 
       getSymbol();
 
@@ -2686,7 +2687,6 @@ int gr_factor(int* attribute) {
     } else {
       // variable access: identifier
       type = load_variable(variableOrProcedureName);
-      *(attribute + 1) = 0;
     }
 
   // integer?
@@ -2704,8 +2704,6 @@ int gr_factor(int* attribute) {
 
     emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), literal);
 
-    *(attribute + 1) = 0;
-
     getSymbol();
 
     type = INT_T;
@@ -2713,8 +2711,6 @@ int gr_factor(int* attribute) {
   // string?
   } else if (symbol == SYM_STRING) {
     load_string(string);
-
-    *(attribute + 1) = 0;
 
     getSymbol();
 

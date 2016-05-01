@@ -482,6 +482,7 @@ void gr_variable(int offset);
 void gr_initialization(int* name, int offset, int type);
 void gr_procedure(int* procedure, int returnType);
 void gr_cstar();
+int  gr_array();
 
 // ------------------------ GLOBAL VARIABLES -----------------------
 
@@ -2677,6 +2678,11 @@ int gr_factor(int* attribute) {
 
       // reset return register
       emitIFormat(OP_ADDIU, REG_ZR, REG_V0, 0);
+
+    // array?
+    } else if (symbol == SYM_LBRACKET) {
+      type = gr_array();
+
     } else {
       // variable access: identifier
       type = load_variable(variableOrProcedureName);
@@ -2724,6 +2730,7 @@ int gr_factor(int* attribute) {
       getSymbol();
     else
       syntaxErrorSymbol(SYM_RPARENTHESIS);
+
   } else
     syntaxErrorUnexpected();
 
@@ -3915,6 +3922,35 @@ void gr_cstar() {
         syntaxErrorSymbol(SYM_IDENTIFIER);
     }
   }
+}
+
+int gr_array() {
+  int type;
+
+  type = load_variable(identifier);
+
+  if (type != INT_T)
+    typeWarning(INT_T, type);
+
+  getSymbol();
+
+  type = gr_expression();
+
+  if (symbol == SYM_RBRACKET)
+    getSymbol();
+  else
+    syntaxErrorSymbol(SYM_RBRACKET);
+
+  // pointer arithmetic
+  emitLeftShiftBy(2);
+  emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_ADDU);
+
+  tfree(1);
+
+  // dereference
+  emitIFormat(OP_LW, currentTemporary(), currentTemporary(), 0);
+
+  return type;
 }
 
 // -----------------------------------------------------------------
@@ -7024,6 +7060,10 @@ int selfie(int argc, int* argv) {
 
 int main(int argc, int* argv) {
 
+  int* a;
+  int x;
+  int y;
+
   initLibrary();
 
   initScanner();
@@ -7039,6 +7079,17 @@ int main(int argc, int* argv) {
   argv = argv + 1;
 
   print((int*) "This is RSQ Selfie");
+  println();
+
+  a = malloc(10 * SIZEOFINT);
+  
+  x = 0;
+  y = 2 * 2 + 1 - 1 + 1; 
+  *(a + 5) = 2;
+  print(itoa(x, string_buffer, 10, 0, 0));
+  println();
+  x = a[y - 1 + 1];
+  print(itoa(x, string_buffer, 10, 0, 0));
   println();
 
   if (selfie(argc, (int*) argv) != 0) {

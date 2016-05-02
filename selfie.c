@@ -3555,7 +3555,7 @@ void gr_statement() {
     } else
       syntaxErrorSymbol(SYM_LPARENTHESIS);
   }
-  // identifier "=" expression | call
+  // identifier | array "=" expression | call
   else if (symbol == SYM_IDENTIFIER) {
     variableOrProcedureName = identifier;
 
@@ -3901,7 +3901,27 @@ void gr_cstar() {
         // type identifier "(" procedure declaration or definition
         if (symbol == SYM_LPARENTHESIS)
           gr_procedure(variableOrProcedureName, type);
-        else {
+        else if (symbol == SYM_LBRACKET) {
+          getSymbol();
+
+          if (isLiteral()) {
+            allocatedMemory = allocatedMemory + (WORDSIZE * literal);
+            createSymbolTableEntry(GLOBAL_TABLE, variableOrProcedureName, lineNumber, VARIABLE, type, 0, -allocatedMemory);
+
+            getSymbol();
+
+            if (symbol != SYM_RBRACKET)
+              syntaxErrorSymbol(SYM_RBRACKET);
+
+            getSymbol();
+
+            if (symbol != SYM_SEMICOLON)
+              syntaxErrorSymbol(SYM_SEMICOLON);
+
+            getSymbol();
+          } else 
+            syntaxErrorSymbol(SYM_INTEGER);
+        } else {
           allocatedMemory = allocatedMemory + WORDSIZE;
 
           // type identifier ";" global variable declaration

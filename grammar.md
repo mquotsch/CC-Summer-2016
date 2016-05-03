@@ -23,17 +23,16 @@ type             = "int" [ "*" ] .
 
 cast             = "(" type ")" .
 
-array            = identifier "[" expression "]" .
+selector         = "[" expression "]" .
 
 call             = identifier "(" [ expression { "," expression } ] ")" .
 
 literal          = integer | "'" ascii_character "'" .
 
 factor           = [ cast ] 
-                    ( [ "*" ] ( identifier | "(" expression ")" ) |
+                    ( [ "*" ] ( identifier [ selector ] | "(" expression ")" ) |
                       call |
                       literal |
-                      array |
                       """ { ascii_character } """ ) .
 
 term             = factor { ( "*" | "/" | "%" ) factor } .
@@ -57,7 +56,7 @@ if               = "if" "(" expression ")"
 
 return           = "return" [ expression ] .
 
-statement        = ( [ "*" ] identifier | "*" "(" expression ")" | array ) "="
+statement        = ( [ "*" ] identifier [ selecctor ] | "*" "(" expression ")" ) "="
                       expression ";" |
                     call ";" | 
                     while | 
@@ -69,6 +68,6 @@ variable         = type identifier [ "[" integer "]" ] .
 procedure        = "(" [ variable { "," variable } ] ")" 
                     ( ";" | "{" { variable ";" } { statement } "}" ) .
 
-cstar            = { variable [ "=" [ cast ] [ "-" ] literal ] ";" |
+cstar            = { type identifier [ "[" integer "]" ] [ "=" [ cast ] [ "-" ] literal ] ";" |
                    ( "void" | type ) identifier procedure } .
 ```

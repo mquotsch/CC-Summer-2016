@@ -3680,10 +3680,6 @@ void gr_variable(int offset) {
       size = literal;
       getSymbol();
 
-      if (offset != 0) {
-        offset = offset - (size - 1) * WORDSIZE;
-      }
-
       if (symbol != SYM_RBRACKET)
         syntaxErrorSymbol(SYM_RBRACKET);
       else

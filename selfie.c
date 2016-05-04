@@ -3614,7 +3614,12 @@ void gr_statement() {
         getSymbol();
         rtype = gr_expression();
         emitIFormat(OP_SW, previousTemporary(), currentTemporary(), 0);
+        tfree(2);
       }
+      if (symbol == SYM_SEMICOLON)
+        getSymbol();
+      else
+        syntaxErrorSymbol(SYM_SEMICOLON);
     } else
       syntaxErrorUnexpected();
   }
@@ -7147,6 +7152,13 @@ int main(int argc, int* argv) {
   println();
   x = a[y - 1 + 1];
   print(itoa(x, string_buffer, 10, 0, 0));
+  println();
+  array[5] = 4;
+  array[2] = 2;
+  array[3] = array[2] + array[5];
+  print(itoa(array[2], string_buffer, 10, 0, 0));
+  println();
+  print(itoa(array[3], string_buffer, 10, 0, 0));
   println();
 
   if (selfie(argc, (int*) argv) != 0) {

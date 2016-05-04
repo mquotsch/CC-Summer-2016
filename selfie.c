@@ -3646,13 +3646,33 @@ int gr_type() {
 
 void gr_variable(int offset) {
   int type;
+  int size;
 
   type = gr_type();
 
   if (symbol == SYM_IDENTIFIER) {
-    createSymbolTableEntry(LOCAL_TABLE, identifier, lineNumber, VARIABLE, type, 0, offset, 1);
+    size = 1;
 
     getSymbol();
+
+    if (symbol == SYM_LBRACKET) {
+      getSymbol();
+
+      size = literal;
+      getSymbol();
+
+      if (offset != 0) {
+        offset = offset - (size - 1) * WORDSIZE;
+      }
+
+      if (symbol != SYM_RBRACKET)
+        syntaxErrorSymbol(SYM_RBRACKET);
+      else
+        getSymbol();
+
+      type = ARRAYINT_T;
+    }
+    createSymbolTableEntry(LOCAL_TABLE, identifier, lineNumber, VARIABLE, type, 0, offset, size);
   } else {
     syntaxErrorSymbol(SYM_IDENTIFIER);
 
@@ -3830,6 +3850,10 @@ void gr_procedure(int* procedure, int returnType) {
       localVariables = localVariables + 1;
 
       gr_variable(-localVariables * WORDSIZE);
+
+      entry = getVariable(identifier);
+
+      localVariables = localVariables + getSize(entry) - 1;
 
       if (symbol == SYM_SEMICOLON)
         getSymbol();
@@ -7084,6 +7108,7 @@ int main(int argc, int* argv) {
   int* a;
   int x;
   int y;
+  int array[10];
 
   initLibrary();
 

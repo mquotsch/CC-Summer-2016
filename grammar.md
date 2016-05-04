@@ -56,7 +56,7 @@ if               = "if" "(" expression ")"
 
 return           = "return" [ expression ] .
 
-statement        = ( [ "*" ] identifier [ selecctor ] | "*" "(" expression ")" ) "="
+statement        = ( [ "*" ] identifier [ selector ] | "*" "(" expression ")" ) "="
                       expression ";" |
                     call ";" | 
                     while | 

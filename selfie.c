@@ -2689,6 +2689,8 @@ int gr_factor(int* attribute) {
     } else if (symbol == SYM_LBRACKET) {
       type = gr_array();
 
+      // dereference
+      emitIFormat(OP_LW, currentTemporary(), currentTemporary(), 0);
     } else {
       // variable access: identifier
       type = load_variable(variableOrProcedureName);
@@ -3475,8 +3477,8 @@ void gr_return(int returnType) {
 }
 
 void gr_statement() {
-  int ltype;
-  int rtype;
+  int  ltype;
+  int  rtype;
   int* variableOrProcedureName;
   int* entry;
 
@@ -3560,7 +3562,7 @@ void gr_statement() {
     } else
       syntaxErrorSymbol(SYM_LPARENTHESIS);
   }
-  // identifier | array "=" expression | call
+  // identifier "=" expression | call
   else if (symbol == SYM_IDENTIFIER) {
     variableOrProcedureName = identifier;
 
@@ -3601,6 +3603,18 @@ void gr_statement() {
         getSymbol();
       else
         syntaxErrorSymbol(SYM_SEMICOLON);
+
+    // identifier selector "=" expression
+    } else if (symbol == SYM_LBRACKET) {
+      entry = getVariable(variableOrProcedureName);
+
+      ltype = gr_array();
+
+      if (symbol == SYM_ASSIGN) {
+        getSymbol();
+        rtype = gr_expression();
+        emitIFormat(OP_SW, previousTemporary(), currentTemporary(), 0);
+      }
     } else
       syntaxErrorUnexpected();
   }
@@ -3967,9 +3981,6 @@ int gr_array() {
   emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_ADDU);
 
   tfree(1);
-
-  // dereference
-  emitIFormat(OP_LW, currentTemporary(), currentTemporary(), 0);
 
   return type;
 }
@@ -7103,7 +7114,7 @@ int main(int argc, int* argv) {
   println();
 
   a = malloc(10 * SIZEOFINT);
-  
+
   x = 0;
   y = 2 * 2 + 1 - 1 + 1; 
   *(a + 5) = 2;

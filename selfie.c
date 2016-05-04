@@ -500,6 +500,8 @@ int* currentProcedureName = (int*) 0; // name of currently parsed procedure
 
 int CONSTANT = 1; // represents the constant value of attribute
 
+int cool[10];
+
 // -----------------------------------------------------------------
 // ---------------------- MACHINE CODE LIBRARY ---------------------
 // -----------------------------------------------------------------
@@ -3949,6 +3951,7 @@ void gr_cstar() {
         if (symbol == SYM_LPARENTHESIS)
           gr_procedure(variableOrProcedureName, type);
         else if (symbol == SYM_LBRACKET) {
+          type = ARRAYINT_T;
           getSymbol();
 
           if (isLiteral()) {
@@ -7144,6 +7147,9 @@ int main(int argc, int* argv) {
 
   a = malloc(10 * SIZEOFINT);
 
+  cool[2] = 24;
+  print(itoa(cool[2], string_buffer, 10, 0, 0));
+  println();
   x = 0;
   y = 2 * 2 + 1 - 1 + 1; 
   *(a + 5) = 2;

@@ -2687,7 +2687,10 @@ int gr_factor(int* attribute) {
 
     // array?
     } else if (symbol == SYM_LBRACKET) {
-      type = gr_array();
+        type = gr_array();
+
+      if (type == ARRAYINT_T) 
+        type = INT_T;
 
       // dereference
       emitIFormat(OP_LW, currentTemporary(), currentTemporary(), 0);
@@ -3989,8 +3992,8 @@ int gr_array() {
 
   type = load_variable(identifier);
 
-  if (type != INT_T)
-    typeWarning(INT_T, type);
+  if (type != ARRAYINT_T) 
+    typeWarning(ARRAYINT_T, type);
 
   getSymbol();
 

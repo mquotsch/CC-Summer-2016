@@ -3956,7 +3956,7 @@ void gr_cstar() {
 
           if (isLiteral()) {
             allocatedMemory = allocatedMemory + (WORDSIZE * literal);
-            createSymbolTableEntry(GLOBAL_TABLE, variableOrProcedureName, lineNumber, VARIABLE, type, 0, -allocatedMemory, 1);
+            createSymbolTableEntry(GLOBAL_TABLE, variableOrProcedureName, lineNumber, VARIABLE, type, 0, -allocatedMemory, literal);
 
             getSymbol();
 
@@ -4488,7 +4488,7 @@ void emitGlobalsStrings() {
     if (getClass(entry) == VARIABLE) {
       storeBinary(binaryLength, getValue(entry));
 
-      binaryLength = binaryLength + WORDSIZE;
+      binaryLength = binaryLength + getSize(entry) * WORDSIZE;
     } else if (getClass(entry) == STRING)
       binaryLength = copyStringToBinary(getString(entry), binaryLength);
 
@@ -7121,6 +7121,10 @@ int selfie(int argc, int* argv) {
   return 0;
 }
 
+void f(){
+    cool[2] = 24;
+}
+
 int main(int argc, int* argv) {
 
   int* a;
@@ -7147,7 +7151,7 @@ int main(int argc, int* argv) {
 
   a = malloc(10 * SIZEOFINT);
 
-  cool[2] = 24;
+  f();
   print(itoa(cool[2], string_buffer, 10, 0, 0));
   println();
   x = 0;

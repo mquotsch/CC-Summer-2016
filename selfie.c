@@ -500,7 +500,7 @@ int* currentProcedureName = (int*) 0; // name of currently parsed procedure
 
 int CONSTANT = 1; // represents the constant value of attribute
 
-int cool[10];
+int globalArray[10];
 
 // -----------------------------------------------------------------
 // ---------------------- MACHINE CODE LIBRARY ---------------------
@@ -7122,15 +7122,14 @@ int selfie(int argc, int* argv) {
 }
 
 void f(){
-    cool[2] = 24;
+  globalArray[2] = 24;
 }
 
 int main(int argc, int* argv) {
 
-  int* a;
   int x;
   int y;
-  int array[10];
+  int localArray[10];
 
   initLibrary();
 
@@ -7149,25 +7148,28 @@ int main(int argc, int* argv) {
   print((int*) "This is RSQ Selfie");
   println();
 
-  a = malloc(10 * SIZEOFINT);
-
+  // global array tests
   f();
-  print(itoa(cool[2], string_buffer, 10, 0, 0));
+  print(itoa(globalArray[2], string_buffer, 10, 0, 0));
   println();
+
+  // local array tests
+  localArray[5] = 4;
+  localArray[2] = 2;
+  localArray[3] = localArray[2] + localArray[5];
+  print(itoa(localArray[2], string_buffer, 10, 0, 0));
+  println();
+  print(itoa(localArray[3], string_buffer, 10, 0, 0));
+  println();
+
+  // tests with variables
   x = 0;
   y = 2 * 2 + 1 - 1 + 1; 
-  *(a + 5) = 2;
-  print(itoa(x, string_buffer, 10, 0, 0));
+  localArray[x] = 4;
+  print(itoa(localArray[0], string_buffer, 10, 0, 0));
   println();
-  x = a[y - 1 + 1];
-  print(itoa(x, string_buffer, 10, 0, 0));
-  println();
-  array[5] = 4;
-  array[2] = 2;
-  array[3] = array[2] + array[5];
-  print(itoa(array[2], string_buffer, 10, 0, 0));
-  println();
-  print(itoa(array[3], string_buffer, 10, 0, 0));
+  localArray[y] = 200;
+  print(itoa(localArray[y], string_buffer, 10, 0, 0));
   println();
 
   if (selfie(argc, (int*) argv) != 0) {

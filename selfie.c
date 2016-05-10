@@ -2584,6 +2584,7 @@ int gr_factor(int* attribute) {
   int hasCast;
   int cast;
   int type;
+  int* entry;
 
   int* variableOrProcedureName;
 
@@ -2697,7 +2698,15 @@ int gr_factor(int* attribute) {
       emitIFormat(OP_LW, currentTemporary(), currentTemporary(), 0);
     } else {
       // variable access: identifier
-      type = load_variable(variableOrProcedureName);
+      entry = getVariable(variableOrProcedureName);
+      if (getType(entry) == ARRAYINT_T){
+        talloc();
+        emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), getAddress(entry));
+        emitRFormat(OP_SPECIAL, getScope(entry), currentTemporary(), currentTemporary(), FCT_ADDU);
+        print((int*) "load");
+        println();
+      } else
+        type = load_variable(variableOrProcedureName);
     }
 
   // integer?
@@ -3999,30 +4008,52 @@ int gr_array() {
 
   entry = getVariable(identifier);
 
-  talloc();
-  emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), getAddress(entry));
+  if (getAddress(entry) > 0) {
+    if (getType(entry) == ARRAYINT_T) {
+      load_variable(identifier);
 
-  type = getType(entry);
+      getSymbol();
 
-  if (type != ARRAYINT_T) 
-    typeWarning(ARRAYINT_T, type);
+      type = gr_expression();
 
-  getSymbol();
+      if (symbol == SYM_RBRACKET)
+        getSymbol();
+      else
+        syntaxErrorSymbol(SYM_RBRACKET);
 
-  type = gr_expression();
+      // pointer arithmetic
+      emitLeftShiftBy(2);
+      emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_ADDU);
 
-  if (symbol == SYM_RBRACKET)
+      tfree(1);
+    }
+  } else {
+
+    talloc();
+    emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), getAddress(entry));
+
+    type = getType(entry);
+
+    if (type != ARRAYINT_T) 
+      typeWarning(ARRAYINT_T, type);
+
     getSymbol();
-  else
-    syntaxErrorSymbol(SYM_RBRACKET);
 
-  // pointer arithmetic
-  emitLeftShiftBy(2);
-  emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_ADDU);
+    type = gr_expression();
 
-  tfree(1);
+    if (symbol == SYM_RBRACKET)
+      getSymbol();
+    else
+      syntaxErrorSymbol(SYM_RBRACKET);
 
-  emitRFormat(OP_SPECIAL, getScope(entry), currentTemporary(), currentTemporary(), FCT_ADDU);
+    // pointer arithmetic
+    emitLeftShiftBy(2);
+    emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_ADDU);
+
+    tfree(1);
+
+    emitRFormat(OP_SPECIAL, getScope(entry), currentTemporary(), currentTemporary(), FCT_ADDU);
+  }
 
   return type;
 }

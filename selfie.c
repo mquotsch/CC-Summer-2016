@@ -3613,7 +3613,7 @@ void gr_statement() {
     } else if (symbol == SYM_LBRACKET) {
       entry = getVariable(variableOrProcedureName);
 
-      ltype = gr_array();
+      rtype = gr_array();
 
       if (symbol == SYM_ASSIGN) {
         getSymbol();
@@ -3684,6 +3684,10 @@ void gr_variable(int offset) {
 
       size = literal;
       getSymbol();
+
+      if (offset != 0) {
+        offset = offset - (size - 1) * WORDSIZE;
+      }
 
       if (symbol != SYM_RBRACKET)
         syntaxErrorSymbol(SYM_RBRACKET);
@@ -3991,9 +3995,15 @@ void gr_cstar() {
 }
 
 int gr_array() {
-  int type;
+  int  type;
+  int* entry;
 
-  type = load_variable(identifier);
+  entry = getVariable(identifier);
+
+  talloc();
+  emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), getAddress(entry));
+
+  type = getType(entry);
 
   if (type != ARRAYINT_T) 
     typeWarning(ARRAYINT_T, type);
@@ -4012,6 +4022,8 @@ int gr_array() {
   emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_ADDU);
 
   tfree(1);
+
+  emitRFormat(OP_SPECIAL, getScope(entry), currentTemporary(), currentTemporary(), FCT_ADDU);
 
   return type;
 }
@@ -7122,7 +7134,7 @@ int selfie(int argc, int* argv) {
 }
 
 void f(){
-  globalArray[2] = 24;
+  globalArray[3] = 27;
 }
 
 int main(int argc, int* argv) {
@@ -7130,6 +7142,7 @@ int main(int argc, int* argv) {
   int x;
   int y;
   int localArray[10];
+  int localArray2[20];
 
   initLibrary();
 
@@ -7150,13 +7163,21 @@ int main(int argc, int* argv) {
 
   // global array tests
   f();
-  print(itoa(globalArray[2], string_buffer, 10, 0, 0));
+  print(itoa(globalArray[3], string_buffer, 10, 0, 0));
   println();
 
+
   // local array tests
-  localArray[5] = 4;
+  localArray[7] = 55;
+  localArray2[7] = 147;
+  print(itoa(localArray[7], string_buffer, 10, 0, 0));
+  println();
+  print(itoa(localArray2[7], string_buffer, 10, 0, 0));
+  println();
+  print((int*) "---");
+  println();
   localArray[2] = 2;
-  localArray[3] = localArray[2] + localArray[5];
+  localArray[3] = localArray[2] + localArray[7];
   print(itoa(localArray[2], string_buffer, 10, 0, 0));
   println();
   print(itoa(localArray[3], string_buffer, 10, 0, 0));

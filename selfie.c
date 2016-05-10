@@ -7163,8 +7163,18 @@ int selfie(int argc, int* argv) {
   return 0;
 }
 
-void f(){
+void f() {
   globalArray[3] = 27;
+}
+
+void testing(int array[3]) {
+  array[9] = 399;
+}
+
+void testing2(int array1[3], int array2[2]) {
+  array1[5] = 888;
+  array2[3] = 2;
+  array1[3] = array1[6] - array2[3];
 }
 
 int main(int argc, int* argv) {
@@ -7173,6 +7183,8 @@ int main(int argc, int* argv) {
   int y;
   int localArray[10];
   int localArray2[20];
+  int paramArr[10];
+  int paramArr2[5];
 
   initLibrary();
 
@@ -7221,6 +7233,26 @@ int main(int argc, int* argv) {
   println();
   localArray[y] = 200;
   print(itoa(localArray[y], string_buffer, 10, 0, 0));
+  println();
+  print((int*) "---");
+  println();
+
+  // tests on arrays as parameters
+  paramArr[9] = 5;
+  testing(paramArr);
+  print(itoa(paramArr[9], string_buffer, 10, 0, 0));
+  println();
+  print((int*) "---");
+  println();
+
+  // with 2 parameters
+  paramArr[6] = 4;
+  testing2(paramArr, paramArr2);
+  print(itoa(paramArr[3], string_buffer, 10, 0, 0));
+  println();
+  print(itoa(paramArr2[5 - 2], string_buffer, 10, 0, 0));
+  println();
+  print(itoa(paramArr[5], string_buffer, 10, 0, 0));
   println();
 
   if (selfie(argc, (int*) argv) != 0) {

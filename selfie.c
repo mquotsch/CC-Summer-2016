@@ -472,11 +472,13 @@ void syntaxErrorSymbol(int expected);
 void syntaxErrorUnexpected();
 int* putType(int type);
 void typeWarning(int expected, int found);
+void checkRBracket();
 
 int* getVariable(int* variable);
 int  load_variable(int* variable);
 void load_integer(int value);
 void load_string(int* string);
+void calculate2DOffset(int* entry);
 
 int  help_call_codegen(int* entry, int* procedure);
 void help_procedure_prologue(int localVariables);
@@ -2373,6 +2375,13 @@ void typeWarning(int expected, int found) {
   println();
 }
 
+void checkRBracket() {
+  if (symbol != SYM_RBRACKET)
+    syntaxErrorSymbol(SYM_RBRACKET);
+  else
+    getSymbol();
+}
+
 int* getVariable(int* variable) {
   int* entry;
 
@@ -2456,6 +2465,26 @@ void load_string(int* string) {
   talloc();
 
   emitIFormat(OP_ADDIU, REG_GP, currentTemporary(), -allocatedMemory);
+}
+
+void calculate2DOffset(int* entry) {
+  int type;
+
+  // load the size of the 2nd dimension into the currentTemp
+  load_integer(getSecondD(entry));
+
+  // index of the 1D array * size of 2D array --> previousTemp
+  emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_MULTU);
+  emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
+
+  tfree(1);
+
+  type = gr_expression();
+
+  // previousTemp + index of 2D array --> previousTemp
+  emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_ADDU);
+
+  tfree(1);
 }
 
 int help_call_codegen(int* entry, int* procedure) {
@@ -3711,24 +3740,25 @@ void gr_variable(int offset) {
     if (symbol == SYM_LBRACKET) {
       getSymbol();
 
-      firstDimension = literal;
-      size = literal;
-      getSymbol();
-
-      if (symbol != SYM_RBRACKET)
-        syntaxErrorSymbol(SYM_RBRACKET);
-      else
+      if (isLiteral()) {
+        firstDimension = literal;
+        size = literal;
         getSymbol();
+      } else
+        syntaxErrorUnexpected();
+
+      checkRBracket();
 
       if (symbol == SYM_LBRACKET) {
         getSymbol();
-        secondDimension = literal;
-        getSymbol();
 
-        if (symbol != SYM_RBRACKET)
-          syntaxErrorSymbol(SYM_RBRACKET);
-        else
+        if (isLiteral()) {
+          secondDimension = literal;
           getSymbol();
+        } else
+          syntaxErrorUnexpected();
+
+        checkRBracket();
 
         size = firstDimension * secondDimension;
       }
@@ -4009,10 +4039,7 @@ void gr_cstar() {
             secondDimension = 1;
             getSymbol();
 
-            if (symbol != SYM_RBRACKET)
-              syntaxErrorSymbol(SYM_RBRACKET);
-
-            getSymbol();
+            checkRBracket();
 
             size = firstDimension;
 
@@ -4021,10 +4048,8 @@ void gr_cstar() {
               secondDimension = literal;
               getSymbol();
 
-              if (symbol != SYM_RBRACKET)
-                syntaxErrorSymbol(SYM_RBRACKET);
+              checkRBracket();
 
-              getSymbol();
               size = firstDimension * secondDimension;
             }
 
@@ -4062,6 +4087,7 @@ int gr_array() {
 
   entry = getVariable(identifier);
 
+  // arrays as parameters
   if (getAddress(entry) > 0) {
     if (getType(entry) == ARRAYINT_T) {
       load_variable(identifier);
@@ -4070,31 +4096,15 @@ int gr_array() {
 
       type = gr_expression();
 
-      if (symbol == SYM_RBRACKET)
-        getSymbol();
-      else
-        syntaxErrorSymbol(SYM_RBRACKET);
+      checkRBracket();
 
+      // 2D array?
       if (symbol == SYM_LBRACKET) {
         getSymbol();
 
-        load_integer(getSecondD(entry));
+        calculate2DOffset(entry);
 
-        emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_MULTU);
-        emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
-
-        tfree(1);
-
-        type = gr_expression();
-
-        emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_ADDU);
-
-        tfree(1);
-
-        if (symbol == SYM_RBRACKET)
-          getSymbol();
-        else
-          syntaxErrorSymbol(SYM_RBRACKET);
+        checkRBracket();
       }
 
       // pointer arithmetic
@@ -4103,45 +4113,32 @@ int gr_array() {
 
       tfree(1);
     }
+
+    // arrays in a statement: e.g. a[2] = 3;
   } else {
 
+    // load address from identifier into the currentTemp
     talloc();
     emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), getAddress(entry));
 
     type = getType(entry);
 
-    if (type != ARRAYINT_T) 
+    if (type != ARRAYINT_T)
       typeWarning(ARRAYINT_T, type);
 
     getSymbol();
 
     type = gr_expression();
 
-    if (symbol == SYM_RBRACKET)
-      getSymbol();
-    else
-      syntaxErrorSymbol(SYM_RBRACKET);
+    checkRBracket();
 
+    // 2D array?
     if (symbol == SYM_LBRACKET) {
       getSymbol();
 
-      load_integer(getSecondD(entry));
+      calculate2DOffset(entry);
 
-      emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_MULTU);
-      emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
-
-      tfree(1);
-
-      type = gr_expression();
-
-      emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_ADDU);
-
-      tfree(1);
-
-      if (symbol == SYM_RBRACKET)
-        getSymbol();
-      else
-        syntaxErrorSymbol(SYM_RBRACKET);
+      checkRBracket();
     }
 
     // pointer arithmetic
@@ -4315,7 +4312,7 @@ void printOccurrences(){
   int i;
 
   i = 0;
-  
+
   while (i < 32){
     printSymbol(i);
     print((int*) ": ");
@@ -7283,14 +7280,19 @@ void f() {
   globalArray2[3][1] = 75;
 }
 
-void testing(int array[3]) {
+void testing1D(int array[3]) {
   array[9] = 399;
 }
 
-void testing2(int array1[3], int array2[2]) {
+void testing1D2(int array1[3], int array2[2]) {
   array1[5] = 888;
   array2[3] = 2;
   array1[3] = array1[6] - array2[3];
+}
+
+void testing2D(int array1[10][5]) {
+  array1[5][2] = 33;
+  array1[3][3] = array1[5][2] + array1[5][2];
 }
 
 int main(int argc, int* argv) {
@@ -7301,6 +7303,7 @@ int main(int argc, int* argv) {
   int localArray2[20];
   int paramArr[10];
   int paramArr2[5];
+  int local2DArr[10][5];
 
   initLibrary();
 
@@ -7329,17 +7332,12 @@ int main(int argc, int* argv) {
 
   // local array tests
   localArray[7] = 55;
-  localArray2[7] = 147;
+  localArray[2] = 2;
   print(itoa(localArray[7], string_buffer, 10, 0, 0));
-  println();
-  print(itoa(localArray2[7], string_buffer, 10, 0, 0));
   println();
   print((int*) "---");
   println();
-  localArray[2] = 2;
   localArray[3] = localArray[2] + localArray[7];
-  print(itoa(localArray[2], string_buffer, 10, 0, 0));
-  println();
   print(itoa(localArray[3], string_buffer, 10, 0, 0));
   println();
 
@@ -7355,22 +7353,41 @@ int main(int argc, int* argv) {
   print((int*) "---");
   println();
 
-  // tests on arrays as parameters
+  // tests on 1D arrays as parameters
   paramArr[9] = 5;
-  testing(paramArr);
+  testing1D(paramArr);
   print(itoa(paramArr[9], string_buffer, 10, 0, 0));
   println();
   print((int*) "---");
   println();
 
-  // with 2 parameters
+  // 1D arrays with 2 parameters
   paramArr[6] = 4;
-  testing2(paramArr, paramArr2);
+  testing1D2(paramArr, paramArr2);
   print(itoa(paramArr[3], string_buffer, 10, 0, 0));
   println();
   print(itoa(paramArr2[5 - 2], string_buffer, 10, 0, 0));
   println();
-  print(itoa(paramArr[5], string_buffer, 10, 0, 0));
+  print((int*) "---");
+  println();
+
+  // tests on local 2D arrays
+  local2DArr[2][1] = 7;
+  local2DArr[2][2] = 5;
+  local2DArr[2][3] = local2DArr[2][1] + local2DArr[2][2];
+  print(itoa(local2DArr[2][1], string_buffer, 10, 0, 0));
+  println();
+  print(itoa(local2DArr[2][3], string_buffer, 10, 0, 0));
+  println();
+  print((int*) "---");
+  println();
+
+  // tests on 2D arrays as parameters
+  testing2D(local2DArr);
+  print(itoa(local2DArr[3][3], string_buffer, 10, 0, 0));
+  println();
+  print((int*) "Solution: 27, 75, 55, 57, 4, 200, 399, 2, 2, 7, 12, 66");
+  println();
   println();
 
   if (selfie(argc, (int*) argv) != 0) {

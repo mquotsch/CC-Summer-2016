@@ -381,7 +381,7 @@ int reportUndefinedProcedures();
 // |  6 | address | VARIABLE: offset, PROCEDURE: address, STRING: offset
 // |  7 | scope   | REG_GP, REG_FP
 // |  8 | firstD  | size of first dimension
-// |  9 | secondD | size of second dimension 
+// |  9 | secondD | size of second dimension
 // +----+---------+
 
 int* getNextEntry(int* entry)  { return (int*) *entry; }
@@ -3926,8 +3926,11 @@ void gr_procedure(int* procedure, int returnType) {
 }
 
 void gr_cstar() {
-  int type;
+  int  type;
   int* variableOrProcedureName;
+  int  size;
+  int  firstDimension;
+  int  secondDimension;
 
   while (symbol != SYM_EOF) {
     while (lookForType()) {
@@ -3969,15 +3972,30 @@ void gr_cstar() {
           getSymbol();
 
           if (isLiteral()) {
-            allocatedMemory = allocatedMemory + (WORDSIZE * literal);
-            createSymbolTableEntry(GLOBAL_TABLE, variableOrProcedureName, lineNumber, VARIABLE, type, 0, -allocatedMemory, literal, 1);
-
+            firstDimension = literal;
             getSymbol();
 
             if (symbol != SYM_RBRACKET)
               syntaxErrorSymbol(SYM_RBRACKET);
 
             getSymbol();
+
+            size = firstDimension;
+
+            if (symbol == SYM_LBRACKET) {
+              getSymbol();
+              secondDimension = literal;
+              getSymbol();
+
+              if (symbol != SYM_RBRACKET)
+                syntaxErrorSymbol(SYM_RBRACKET);
+
+              getSymbol();
+              size = firstDimension * secondDimension;
+            }
+
+            allocatedMemory = allocatedMemory + (WORDSIZE * size);
+            createSymbolTableEntry(GLOBAL_TABLE, variableOrProcedureName, lineNumber, VARIABLE, type, 0, -allocatedMemory, firstDimension, secondDimension);
 
             if (symbol != SYM_SEMICOLON)
               syntaxErrorSymbol(SYM_SEMICOLON);

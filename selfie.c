@@ -504,6 +504,8 @@ int CONSTANT = 1; // represents the constant value of attribute
 
 int globalArray[10];
 
+int globalArray2[10][5];
+
 // -----------------------------------------------------------------
 // ---------------------- MACHINE CODE LIBRARY ---------------------
 // -----------------------------------------------------------------
@@ -3681,32 +3683,49 @@ int gr_type() {
 void gr_variable(int offset) {
   int type;
   int size;
+  int firstDimension;
+  int secondDimension;
 
   type = gr_type();
 
   if (symbol == SYM_IDENTIFIER) {
-    size = 1;
+    firstDimension = 1;
+    secondDimension = 1;
 
     getSymbol();
 
     if (symbol == SYM_LBRACKET) {
       getSymbol();
 
+      firstDimension = literal;
       size = literal;
       getSymbol();
-
-      if (offset != 0) {
-        offset = offset - (size - 1) * WORDSIZE;
-      }
 
       if (symbol != SYM_RBRACKET)
         syntaxErrorSymbol(SYM_RBRACKET);
       else
         getSymbol();
 
+      if (symbol == SYM_LBRACKET) {
+        getSymbol();
+        secondDimension = literal;
+        getSymbol();
+
+        if (symbol != SYM_RBRACKET)
+          syntaxErrorSymbol(SYM_RBRACKET);
+        else
+          getSymbol();
+
+        size = firstDimension * secondDimension;
+      }
+
+      if (offset != 0) {
+        offset = offset - (size - 1) * WORDSIZE;
+      }
+
       type = ARRAYINT_T;
     }
-    createSymbolTableEntry(LOCAL_TABLE, identifier, lineNumber, VARIABLE, type, 0, offset, size, 1);
+    createSymbolTableEntry(LOCAL_TABLE, identifier, lineNumber, VARIABLE, type, 0, offset, firstDimension, secondDimension);
   } else {
     syntaxErrorSymbol(SYM_IDENTIFIER);
 
@@ -3887,7 +3906,7 @@ void gr_procedure(int* procedure, int returnType) {
 
       entry = getVariable(identifier);
 
-      localVariables = localVariables + getFirstD(entry) - 1;
+      localVariables = localVariables + getFirstD(entry) * getSecondD(entry) - 1;
 
       if (symbol == SYM_SEMICOLON)
         getSymbol();
@@ -3973,6 +3992,7 @@ void gr_cstar() {
 
           if (isLiteral()) {
             firstDimension = literal;
+            secondDimension = 1;
             getSymbol();
 
             if (symbol != SYM_RBRACKET)
@@ -4550,7 +4570,7 @@ void emitGlobalsStrings() {
     if (getClass(entry) == VARIABLE) {
       storeBinary(binaryLength, getValue(entry));
 
-      binaryLength = binaryLength + getFirstD(entry) * WORDSIZE;
+      binaryLength = binaryLength + getFirstD(entry) * getSecondD(entry) * WORDSIZE;
     } else if (getClass(entry) == STRING)
       binaryLength = copyStringToBinary(getString(entry), binaryLength);
 

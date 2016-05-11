@@ -23,7 +23,7 @@ type             = "int" [ "*" ] .
 
 cast             = "(" type ")" .
 
-selector         = "[" expression "]" .
+selector         = "[" expression "]" [ "[" expression "]" ] .
 
 call             = identifier "(" [ expression { "," expression } ] ")" .
 
@@ -63,11 +63,11 @@ statement        = ( [ "*" ] identifier [ selector ] | "*" "(" expression ")" ) 
                     if | 
                     return ";" .
 
-variable         = type identifier [ "[" integer "]" ] .
+variable         = type identifier [ "[" integer "]" ] [ "[" integer "]" ] .
 
 procedure        = "(" [ variable { "," variable } ] ")" 
                     ( ";" | "{" { variable ";" } { statement } "}" ) .
 
-cstar            = { type identifier [ "[" integer "]" ] [ "=" [ cast ] [ "-" ] literal ] ";" |
+cstar            = { type identifier [ "[" integer "]" ] [ "[" integer "]" ] [ "=" [ cast ] [ "-" ] literal ] ";" |
                    ( "void" | type ) identifier procedure } .
 ```

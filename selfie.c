@@ -4061,6 +4061,28 @@ int gr_array() {
       else
         syntaxErrorSymbol(SYM_RBRACKET);
 
+      if (symbol == SYM_LBRACKET) {
+        getSymbol();
+
+        load_integer(getSecondD(entry));
+
+        emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_MULTU);
+        emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
+
+        tfree(1);
+
+        type = gr_expression();
+
+        emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_ADDU);
+
+        tfree(1);
+
+        if (symbol == SYM_RBRACKET)
+          getSymbol();
+        else
+          syntaxErrorSymbol(SYM_RBRACKET);
+      }
+
       // pointer arithmetic
       emitLeftShiftBy(2);
       emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_ADDU);
@@ -4085,6 +4107,28 @@ int gr_array() {
       getSymbol();
     else
       syntaxErrorSymbol(SYM_RBRACKET);
+
+    if (symbol == SYM_LBRACKET) {
+      getSymbol();
+
+      load_integer(getSecondD(entry));
+
+      emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_MULTU);
+      emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
+
+      tfree(1);
+
+      type = gr_expression();
+
+      emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_ADDU);
+
+      tfree(1);
+
+      if (symbol == SYM_RBRACKET)
+        getSymbol();
+      else
+        syntaxErrorSymbol(SYM_RBRACKET);
+    }
 
     // pointer arithmetic
     emitLeftShiftBy(2);
@@ -7205,6 +7249,7 @@ int selfie(int argc, int* argv) {
 
 void f() {
   globalArray[3] = 27;
+  globalArray2[3][1] = 75;
 }
 
 void testing(int array[3]) {
@@ -7246,6 +7291,8 @@ int main(int argc, int* argv) {
   // global array tests
   f();
   print(itoa(globalArray[3], string_buffer, 10, 0, 0));
+  println();
+  print(itoa(globalArray2[3][1], string_buffer, 10, 0, 0));
   println();
 
 

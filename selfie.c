@@ -2481,6 +2481,9 @@ void calculate2DOffset(int* entry) {
 
   type = gr_expression();
 
+  if (type != INT_T)
+    typeWarning(INT_T, type);
+
   // previousTemp + index of 2D array --> previousTemp
   emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_ADDU);
 
@@ -3168,7 +3171,7 @@ int gr_shiftExpression(int* attribute) {
   // assert: allocatedTemporaries == n + 1
 
   // << or >>?
-  if (isShift()) {
+  while (isShift()) {
     operatorSymbol = symbol;
 
     getSymbol();
@@ -3262,8 +3265,13 @@ int gr_expression() {
 
   ltype = gr_shiftExpression(attribute);
 
-  if (*(attribute + 1) == CONSTANT)
-    load_integer(*attribute);
+  if (*(attribute + 1) == CONSTANT){
+    if (*attribute < 0){
+      load_integer(-*attribute);
+      emitRFormat(OP_SPECIAL, REG_ZR, currentTemporary(), currentTemporary(), FCT_SUBU);
+    } else
+      load_integer(*attribute);
+  }
 
   // assert: allocatedTemporaries == n + 1
 
@@ -7300,7 +7308,6 @@ int main(int argc, int* argv) {
   int x;
   int y;
   int localArray[10];
-  int localArray2[20];
   int paramArr[10];
   int paramArr2[5];
   int local2DArr[10][5];

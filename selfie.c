@@ -281,8 +281,9 @@ int SYM_LSHIFT       = 28; // <<
 int SYM_RSHIFT       = 29; // >> 
 int SYM_LBRACKET     = 30; // [
 int SYM_RBRACKET     = 31; // ]
+int SYM_STRUCT       = 32; // struct
 
-int SYMBOLS[32][2]; // array of strings representing symbols
+int SYMBOLS[33][2]; // array of strings representing symbols
 
 int maxIdentifierLength = 64; // maximum number of characters in an identifier
 int maxIntegerLength    = 10; // maximum number of characters in an integer
@@ -346,13 +347,14 @@ void initScanner () {
   SYMBOLS[SYM_RSHIFT][0]       = (int) ">>";
   SYMBOLS[SYM_LBRACKET][0]     = (int) "[";
   SYMBOLS[SYM_RBRACKET][0]     = (int) "]";
+  SYMBOLS[SYM_STRUCT][0]       = (int) "struct";
 
   character = CHAR_EOF;
   symbol    = SYM_EOF;
 
   i = 0;
 
-  while (i < 32){
+  while (i < 33){
     SYMBOLS[i][1] = 0;
 
     i = i + 1;
@@ -385,7 +387,7 @@ int reportUndefinedProcedures();
 // |  1 | string  | identifier string, string literal
 // |  2 | line#   | source line number
 // |  3 | class   | VARIABLE, PROCEDURE, STRING
-// |  4 | type    | INT_T, INTSTAR_T, VOID_T, ARRAYINT_T
+// |  4 | type    | INT_T, INTSTAR_T, VOID_T, ARRAYINT_T, STRUCT_T
 // |  5 | value   | VARIABLE: initial value
 // |  6 | address | VARIABLE: offset, PROCEDURE: address, STRING: offset
 // |  7 | scope   | REG_GP, REG_FP
@@ -427,6 +429,7 @@ int INT_T      = 1;
 int INTSTAR_T  = 2;
 int VOID_T     = 3;
 int ARRAYINT_T = 4;
+int STRUCT_T   = 5;
 
 // symbol tables
 int GLOBAL_TABLE  = 1;
@@ -2355,6 +2358,10 @@ int* putType(int type) {
     return (int*) "int*";
   else if (type == VOID_T)
     return (int*) "void";
+  else if (type == ARRAYINT_T)
+    return (int*) "int-array";
+  else if (type == STRUCT_T)
+    return (int*) "struct";
   else
     return (int*) "unknown";
 }
@@ -3265,8 +3272,8 @@ int gr_expression() {
 
   ltype = gr_shiftExpression(attribute);
 
-  if (*(attribute + 1) == CONSTANT){
-    if (*attribute < 0){
+  if (*(attribute + 1) == CONSTANT) {
+    if (*attribute < 0) {
       load_integer(-*attribute);
       emitRFormat(OP_SPECIAL, REG_ZR, currentTemporary(), currentTemporary(), FCT_SUBU);
     } else
@@ -4321,7 +4328,7 @@ void printOccurrences(){
 
   i = 0;
 
-  while (i < 32){
+  while (i < 33){
     printSymbol(i);
     print((int*) ": ");
     print(itoa(SYMBOLS[i][1], string_buffer, 10, 0, 0));

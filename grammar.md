@@ -68,6 +68,8 @@ variable         = type identifier [ "[" integer "]" ] [ "[" integer "]" ] .
 procedure        = "(" [ variable { "," variable } ] ")" 
                     ( ";" | "{" { variable ";" } { statement } "}" ) .
 
+record           = "struct" identifier "{" { variable } "}" .
+
 cstar            = { type identifier [ "[" integer "]" ] [ "[" integer "]" ] [ "=" [ cast ] [ "-" ] literal ] ";" |
                    ( "void" | type ) identifier procedure } .
 ```

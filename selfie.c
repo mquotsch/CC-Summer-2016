@@ -278,7 +278,7 @@ int SYM_MOD          = 25; // %
 int SYM_CHARACTER    = 26; // character
 int SYM_STRING       = 27; // string
 int SYM_LSHIFT       = 28; // <<
-int SYM_RSHIFT       = 29; // >> 
+int SYM_RSHIFT       = 29; // >>
 int SYM_LBRACKET     = 30; // [
 int SYM_RBRACKET     = 31; // ]
 int SYM_STRUCT       = 32; // struct
@@ -382,40 +382,43 @@ int isUndefinedProcedure(int* entry);
 int reportUndefinedProcedures();
 
 // symbol table entry:
-// +----+---------+
-// |  0 | next    | pointer to next entry
-// |  1 | string  | identifier string, string literal
-// |  2 | line#   | source line number
-// |  3 | class   | VARIABLE, PROCEDURE, STRING
-// |  4 | type    | INT_T, INTSTAR_T, VOID_T, ARRAYINT_T, STRUCT_T
-// |  5 | value   | VARIABLE: initial value
-// |  6 | address | VARIABLE: offset, PROCEDURE: address, STRING: offset
-// |  7 | scope   | REG_GP, REG_FP
-// |  8 | firstD  | size of first dimension
-// |  9 | secondD | size of second dimension
-// +----+---------+
+// +----+-----------+
+// |  0 | next      | pointer to next entry
+// |  1 | string    | identifier string, string literal
+// |  2 | line#     | source line number
+// |  3 | class     | VARIABLE, PROCEDURE, STRING
+// |  4 | type      | INT_T, INTSTAR_T, VOID_T, ARRAYINT_T, STRUCT_T
+// |  5 | value     | VARIABLE: initial value
+// |  6 | address   | VARIABLE: offset, PROCEDURE: address, STRING: offset
+// |  7 | scope     | REG_GP, REG_FP
+// |  8 | firstD    | size of first dimension
+// |  9 | secondD   | size of second dimension
+// | 10 | nextField | pointer to next field
+// +----+-----------+
 
 int* getNextEntry(int* entry)  { return (int*) *entry; }
-int* getString(int* entry)     { return (int*) *(entry + 1); }
-int  getLineNumber(int* entry) { return        *(entry + 2); }
-int  getClass(int* entry)      { return        *(entry + 3); }
-int  getType(int* entry)       { return        *(entry + 4); }
-int  getValue(int* entry)      { return        *(entry + 5); }
-int  getAddress(int* entry)    { return        *(entry + 6); }
-int  getScope(int* entry)      { return        *(entry + 7); }
-int  getFirstD(int* entry)     { return        *(entry + 8); }
-int  getSecondD(int* entry)    { return        *(entry + 9); }
+int* getString(int* entry)     { return (int*) *(entry + 1);  }
+int  getLineNumber(int* entry) { return        *(entry + 2);  }
+int  getClass(int* entry)      { return        *(entry + 3);  }
+int  getType(int* entry)       { return        *(entry + 4);  }
+int  getValue(int* entry)      { return        *(entry + 5);  }
+int  getAddress(int* entry)    { return        *(entry + 6);  }
+int  getScope(int* entry)      { return        *(entry + 7);  }
+int  getFirstD(int* entry)     { return        *(entry + 8);  }
+int  getSecondD(int* entry)    { return        *(entry + 9);  }
+int* getNextField(int* entry)  { return        *(entry + 10); }
 
-void setNextEntry(int* entry, int* next)    { *entry       = (int) next; }
-void setString(int* entry, int* identifier) { *(entry + 1) = (int) identifier; }
-void setLineNumber(int* entry, int line)    { *(entry + 2) = line; }
-void setClass(int* entry, int class)        { *(entry + 3) = class; }
-void setType(int* entry, int type)          { *(entry + 4) = type; }
-void setValue(int* entry, int value)        { *(entry + 5) = value; }
-void setAddress(int* entry, int address)    { *(entry + 6) = address; }
-void setScope(int* entry, int scope)        { *(entry + 7) = scope; }
-void setFirstD(int* entry, int firstD)      { *(entry + 8) = firstD; }
-void setSecondD(int* entry, int secondD)    { *(entry + 9) = secondD; }
+void setNextEntry(int* entry, int* next)      { *entry        = (int) next; }
+void setString(int* entry, int* identifier)   { *(entry + 1)  = (int) identifier; }
+void setLineNumber(int* entry, int line)      { *(entry + 2)  = line; }
+void setClass(int* entry, int class)          { *(entry + 3)  = class; }
+void setType(int* entry, int type)            { *(entry + 4)  = type; }
+void setValue(int* entry, int value)          { *(entry + 5)  = value; }
+void setAddress(int* entry, int address)      { *(entry + 6)  = address; }
+void setScope(int* entry, int scope)          { *(entry + 7)  = scope; }
+void setFirstD(int* entry, int firstD)        { *(entry + 8)  = firstD; }
+void setSecondD(int* entry, int secondD)      { *(entry + 9)  = secondD; }
+void setNextField(int* entry, int* nextField) { *(entry + 10) = (int) nextField; }
 
 // ------------------------ GLOBAL CONSTANTS -----------------------
 
@@ -502,7 +505,7 @@ void gr_variable(int offset);
 void gr_initialization(int* name, int offset, int type);
 void gr_procedure(int* procedure, int returnType);
 void gr_cstar();
-int  gr_array();
+int  gr_selector();
 
 // ------------------------ GLOBAL VARIABLES -----------------------
 
@@ -715,7 +718,7 @@ void initDecoder() {
 
   FUNCTIONS = malloc(43 * SIZEOFINTSTAR);
 
-  *(FUNCTIONS + FCT_SLL)     = (int) "sll"; 
+  *(FUNCTIONS + FCT_SLL)     = (int) "sll";
   *(FUNCTIONS + FCT_SRL)     = (int) "srl";
   *(FUNCTIONS + FCT_SLLV)    = (int) "sllv";
   *(FUNCTIONS + FCT_SRLV)    = (int) "srlv";
@@ -1735,6 +1738,8 @@ int identifierOrKeyword() {
     return SYM_RETURN;
   if (identifierStringMatch(SYM_VOID))
     return SYM_VOID;
+ if (identifierStringMatch(SYM_STRUCT))
+    return SYM_STRUCT;
   else
     return SYM_IDENTIFIER;
 }
@@ -2004,7 +2009,7 @@ int getSymbol() {
 void createSymbolTableEntry(int whichTable, int* string, int line, int class, int type, int value, int address, int firstD, int secondD) {
   int* newEntry;
 
-  newEntry = malloc(2 * SIZEOFINTSTAR + 8 * SIZEOFINT);
+  newEntry = malloc(3 * SIZEOFINTSTAR + 8 * SIZEOFINT);
 
   setString(newEntry, string);
   setLineNumber(newEntry, line);
@@ -2014,6 +2019,7 @@ void createSymbolTableEntry(int whichTable, int* string, int line, int class, in
   setAddress(newEntry, address);
   setFirstD(newEntry, firstD);
   setSecondD(newEntry, secondD);
+  setNextField(newEntry, (int*) 0);
 
   // create entry at head of symbol table
   if (whichTable == GLOBAL_TABLE) {
@@ -2183,10 +2189,10 @@ int isComparison() {
 
 int isShift() {
   if (symbol == SYM_LSHIFT)
-    return 1; 
+    return 1;
   else if (symbol == SYM_RSHIFT)
-    return 1; 
-  else 
+    return 1;
+  else
     return 0;
 }
 
@@ -2194,10 +2200,10 @@ int logicalAnd(int arg1, int arg2) {
   if (arg1) {
     if (arg2)
       return 1;
-    else 
+    else
       return 0;
   }
-  else 
+  else
     return 0;
 }
 
@@ -2748,9 +2754,9 @@ int gr_factor(int* attribute) {
 
     // array?
     } else if (symbol == SYM_LBRACKET) {
-        type = gr_array();
+        type = gr_selector();
 
-      if (type == ARRAYINT_T) 
+      if (type == ARRAYINT_T)
         type = INT_T;
 
       // dereference
@@ -2829,7 +2835,7 @@ int gr_term(int *attribute) {
   // assert: n = allocatedTemporaries
 
   ltype = gr_factor(attribute);
-  
+
   lTempValue = *attribute;
   lTempFlag = *(attribute + 1);
 
@@ -2937,7 +2943,7 @@ int gr_term(int *attribute) {
           emitRFormat(OP_SPECIAL, 0, 0, tempReg, FCT_MFHI);
         }
         tfree(1);
-        
+
         if (*(attribute + 1) == 0){
           operatorSymbol = tempOperatorSymbol;
           if (ltype != rtype)
@@ -3105,7 +3111,7 @@ int gr_simpleExpression(int* attribute) {
         // load folded value into a register
         load_integer(rTempValue);
 
-        // variable  [operator]  folded values 
+        // variable  [operator]  folded values
         if (*(attribute + 1))
           tempReg = previousTemporary();
         // variable  [operator]  folded values  [operator]  variable
@@ -3264,7 +3270,7 @@ int gr_expression() {
   int  operatorSymbol;
   int  rtype;
   int* attribute;
-  
+
   //initialisation of the attribute
   attribute = malloc(2 * SIZEOFINT);
 
@@ -3683,7 +3689,7 @@ void gr_statement() {
     } else if (symbol == SYM_LBRACKET) {
       entry = getVariable(variableOrProcedureName);
 
-      rtype = gr_array();
+      rtype = gr_selector();
 
       if (symbol == SYM_ASSIGN) {
         getSymbol();
@@ -4075,7 +4081,7 @@ void gr_cstar() {
               syntaxErrorSymbol(SYM_SEMICOLON);
 
             getSymbol();
-          } else 
+          } else
             syntaxErrorSymbol(SYM_INTEGER);
         } else {
           allocatedMemory = allocatedMemory + WORDSIZE;
@@ -4096,7 +4102,7 @@ void gr_cstar() {
   }
 }
 
-int gr_array() {
+int gr_selector() {
   int  type;
   int* entry;
 
@@ -5709,7 +5715,7 @@ void fct_sll() {
     }
 
     if (interpret)
-      pc = pc + WORDSIZE;    
+      pc = pc + WORDSIZE;
   }
 
   else {
@@ -5739,7 +5745,7 @@ void fct_sll() {
       pc = pc + WORDSIZE;
     }
 
-    if (debug) { 
+    if (debug) {
       if (interpret) {
         print((int*) " -> ");
         printRegister(rd);
@@ -5778,7 +5784,7 @@ void fct_srl() {
     pc = pc + WORDSIZE;
   }
 
-  if (debug) { 
+  if (debug) {
     if (interpret) {
       print((int*) " -> ");
       printRegister(rd);
@@ -5820,7 +5826,7 @@ void fct_sllv() {
     pc = pc + WORDSIZE;
   }
 
-  if (debug) { 
+  if (debug) {
     if (interpret) {
       print((int*) " -> ");
       printRegister(rd);
@@ -5831,7 +5837,7 @@ void fct_sllv() {
   }
 }
 
-void fct_srlv() { 
+void fct_srlv() {
   if (debug) {
     printFunction(function);
     print((int*) " ");
@@ -5862,7 +5868,7 @@ void fct_srlv() {
     pc = pc + WORDSIZE;
   }
 
-  if (debug) { 
+  if (debug) {
     if (interpret) {
       print((int*) " -> ");
         printRegister(rd);
@@ -7357,7 +7363,7 @@ int main(int argc, int* argv) {
 
   // tests with variables
   x = 0;
-  y = 2 * 2 + 1 - 1 + 1; 
+  y = 2 * 2 + 1 - 1 + 1;
   localArray[x] = 4;
   print(itoa(localArray[0], string_buffer, 10, 0, 0));
   println();

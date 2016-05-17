@@ -310,6 +310,14 @@ int symbol;    // most recently recognized symbol
 int* sourceName = (int*) 0; // name of source file
 int  sourceFD   = 0;        // file descriptor of open source file
 
+struct r_t{
+  int a;
+  int b;
+  int* c;
+};
+
+struct r_t* hana;
+
 // ------------------------- INITIALIZATION ------------------------
 
 void initScanner () {
@@ -460,7 +468,6 @@ void resetSymbolTables() {
 
 void createStructTableEntry(int* entry, int* string, int line, int class, int type, int value, int address, int firstD, int secondD);
 int* searchStructTable(int* entry, int* string, int class);
-int* getStructTableEntry(int* string, int class);
 
 // -----------------------------------------------------------------
 // ---------------------------- PARSER -----------------------------
@@ -486,7 +493,7 @@ void syntaxErrorSymbol(int expected);
 void syntaxErrorUnexpected();
 int* putType(int type);
 void typeWarning(int expected, int found);
-void checkRBracket();
+void checkNextSymbol(int symbol);
 
 int* getVariable(int* variable);
 int  load_variable(int* variable);
@@ -2139,11 +2146,16 @@ void createStructTableEntry(int* entry, int* string, int line, int class, int ty
 }
 
 int* searchStructTable(int* entry, int* string, int class){
+  while (entry != (int*) 0) {
+    if (stringCompare(string, getString(entry)))
+      if (class == getClass(entry))
+        return entry;
 
-}
+    // keep looking
+    entry = getNextField(entry);
+  }
 
-int* getStructTableEntry(int* string, int class){
-
+  return (int*) 0;
 }
 
 // -----------------------------------------------------------------
@@ -2287,6 +2299,8 @@ int lookForType() {
     return 0;
   else if (symbol == SYM_EOF)
     return 0;
+  else if (symbol == SYM_STRUCT)
+    return 0;
   else
     return 1;
 }
@@ -2425,12 +2439,13 @@ void typeWarning(int expected, int found) {
   println();
 }
 
-void checkRBracket() {
-  if (symbol != SYM_RBRACKET)
-    syntaxErrorSymbol(SYM_RBRACKET);
+void checkNextSymbol(int nextSymbol) {
+  if (symbol != nextSymbol)
+    syntaxErrorSymbol(nextSymbol);
   else
     getSymbol();
 }
+
 
 int* getVariable(int* variable) {
   int* entry;
@@ -3639,10 +3654,7 @@ void gr_statement() {
       } else
         syntaxErrorSymbol(SYM_ASSIGN);
 
-      if (symbol == SYM_SEMICOLON)
-        getSymbol();
-      else
-        syntaxErrorSymbol(SYM_SEMICOLON);
+      checkNextSymbol(SYM_SEMICOLON);
 
     // "*" "(" expression ")"
     } else if (symbol == SYM_LPARENTHESIS) {
@@ -3671,10 +3683,7 @@ void gr_statement() {
         } else
           syntaxErrorSymbol(SYM_ASSIGN);
 
-        if (symbol == SYM_SEMICOLON)
-          getSymbol();
-        else
-          syntaxErrorSymbol(SYM_SEMICOLON);
+        checkNextSymbol(SYM_SEMICOLON);
       } else
         syntaxErrorSymbol(SYM_RPARENTHESIS);
     } else
@@ -3695,10 +3704,7 @@ void gr_statement() {
       // reset return register
       emitIFormat(OP_ADDIU, REG_ZR, REG_V0, 0);
 
-      if (symbol == SYM_SEMICOLON)
-        getSymbol();
-      else
-        syntaxErrorSymbol(SYM_SEMICOLON);
+      checkNextSymbol(SYM_SEMICOLON);
 
     // identifier = expression
     } else if (symbol == SYM_ASSIGN) {
@@ -3717,10 +3723,7 @@ void gr_statement() {
 
       tfree(1);
 
-      if (symbol == SYM_SEMICOLON)
-        getSymbol();
-      else
-        syntaxErrorSymbol(SYM_SEMICOLON);
+      checkNextSymbol(SYM_SEMICOLON);
 
     // identifier selector "=" expression
     } else if (symbol == SYM_LBRACKET) {
@@ -3734,10 +3737,7 @@ void gr_statement() {
         emitIFormat(OP_SW, previousTemporary(), currentTemporary(), 0);
         tfree(2);
       }
-      if (symbol == SYM_SEMICOLON)
-        getSymbol();
-      else
-        syntaxErrorSymbol(SYM_SEMICOLON);
+      checkNextSymbol(SYM_SEMICOLON);
     } else
       syntaxErrorUnexpected();
   }
@@ -3755,10 +3755,7 @@ void gr_statement() {
 
     gr_return(getType(entry));
 
-    if (symbol == SYM_SEMICOLON)
-      getSymbol();
-    else
-      syntaxErrorSymbol(SYM_SEMICOLON);
+    checkNextSymbol(SYM_SEMICOLON);
   }
 }
 
@@ -3809,7 +3806,7 @@ void gr_variable(int offset) {
       } else
         syntaxErrorUnexpected();
 
-      checkRBracket();
+      checkNextSymbol(SYM_RBRACKET);
 
       if (symbol == SYM_LBRACKET) {
         getSymbol();
@@ -3820,7 +3817,7 @@ void gr_variable(int offset) {
         } else
           syntaxErrorUnexpected();
 
-        checkRBracket();
+        checkNextSymbol(SYM_RBRACKET);
 
         size = firstDimension * secondDimension;
       }
@@ -3899,10 +3896,7 @@ void gr_initialization(int* name, int offset, int type) {
     } else
       syntaxErrorUnexpected();
 
-    if (symbol == SYM_SEMICOLON)
-      getSymbol();
-    else
-      syntaxErrorSymbol(SYM_SEMICOLON);
+    checkNextSymbol(SYM_SEMICOLON);
   } else
     syntaxErrorSymbol(SYM_ASSIGN);
 
@@ -4014,10 +4008,7 @@ void gr_procedure(int* procedure, int returnType) {
 
       localVariables = localVariables + getFirstD(entry) * getSecondD(entry) - 1;
 
-      if (symbol == SYM_SEMICOLON)
-        getSymbol();
-      else
-        syntaxErrorSymbol(SYM_SEMICOLON);
+      checkNextSymbol(SYM_SEMICOLON);
     }
 
     help_procedure_prologue(localVariables);
@@ -4087,6 +4078,8 @@ void gr_cstar() {
         gr_procedure(variableOrProcedureName, type);
       } else
         syntaxErrorSymbol(SYM_IDENTIFIER);
+
+      // struct?
     } else if (symbol == SYM_STRUCT) {
       type = STRUCT_T;
 
@@ -4103,9 +4096,14 @@ void gr_cstar() {
 
           if (symbol == SYM_IDENTIFIER) {
             //TODO: array of structs
-          } else {
+            entry = getSymbolTableEntry(variableOrProcedureName, VARIABLE);
+            allocatedMemory = allocatedMemory + (getAddress(entry) * WORDSIZE);
+
+            createSymbolTableEntry(GLOBAL_TABLE, identifier, lineNumber, VARIABLE, type, 0, -allocatedMemory, getAddress(entry), 1);
+            getSymbol();
+            checkNextSymbol(SYM_SEMICOLON);
+          } else
             syntaxErrorSymbol(SYM_IDENTIFIER);
-          }
 
         // struct identifier {...}
         } else if (symbol == SYM_LBRACE) {
@@ -4123,6 +4121,7 @@ void gr_cstar() {
             if (symbol == SYM_IDENTIFIER) {
               firstDimension = 1;
               secondDimension = 1;
+              size = 1;
 
               getSymbol();
 
@@ -4136,7 +4135,7 @@ void gr_cstar() {
                 } else
                   syntaxErrorUnexpected();
 
-                checkRBracket();
+                checkNextSymbol(SYM_RBRACKET);
 
                 if (symbol == SYM_LBRACKET) {
                   getSymbol();
@@ -4147,7 +4146,7 @@ void gr_cstar() {
                   } else
                     syntaxErrorUnexpected();
 
-                  checkRBracket();
+                  checkNextSymbol(SYM_RBRACKET);
 
                   size = firstDimension * secondDimension;
                 }
@@ -4155,10 +4154,16 @@ void gr_cstar() {
               }
               createStructTableEntry(entry, identifier, lineNumber, VARIABLE, type, 0, size, firstDimension, secondDimension);
               sizeOfRecord = sizeOfRecord + size;
+
+              checkNextSymbol(SYM_SEMICOLON);
             } else
               syntaxErrorSymbol(SYM_IDENTIFIER);
           }
           setAddress(entry, sizeOfRecord);
+
+          getSymbol();
+
+          checkNextSymbol(SYM_SEMICOLON);
         }
       }
     } else {
@@ -4181,7 +4186,7 @@ void gr_cstar() {
             secondDimension = 1;
             getSymbol();
 
-            checkRBracket();
+            checkNextSymbol(SYM_RBRACKET);
 
             size = firstDimension;
 
@@ -4190,7 +4195,7 @@ void gr_cstar() {
               secondDimension = literal;
               getSymbol();
 
-              checkRBracket();
+              checkNextSymbol(SYM_RBRACKET);
 
               size = firstDimension * secondDimension;
             }
@@ -4198,10 +4203,7 @@ void gr_cstar() {
             allocatedMemory = allocatedMemory + (WORDSIZE * size);
             createSymbolTableEntry(GLOBAL_TABLE, variableOrProcedureName, lineNumber, VARIABLE, type, 0, -allocatedMemory, firstDimension, secondDimension);
 
-            if (symbol != SYM_SEMICOLON)
-              syntaxErrorSymbol(SYM_SEMICOLON);
-
-            getSymbol();
+            checkNextSymbol(SYM_SEMICOLON);
           } else
             syntaxErrorSymbol(SYM_INTEGER);
         } else {
@@ -4238,7 +4240,7 @@ int gr_selector() {
 
       type = gr_expression();
 
-      checkRBracket();
+      checkNextSymbol(SYM_RBRACKET);
 
       // 2D array?
       if (symbol == SYM_LBRACKET) {
@@ -4246,7 +4248,7 @@ int gr_selector() {
 
         calculate2DOffset(entry);
 
-        checkRBracket();
+        checkNextSymbol(SYM_RBRACKET);
       }
 
       // pointer arithmetic
@@ -4272,7 +4274,7 @@ int gr_selector() {
 
     type = gr_expression();
 
-    checkRBracket();
+    checkNextSymbol(SYM_RBRACKET);
 
     // 2D array?
     if (symbol == SYM_LBRACKET) {
@@ -4280,7 +4282,7 @@ int gr_selector() {
 
       calculate2DOffset(entry);
 
-      checkRBracket();
+      checkNextSymbol(SYM_RBRACKET);
     }
 
     // pointer arithmetic

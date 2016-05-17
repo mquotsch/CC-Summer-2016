@@ -397,16 +397,16 @@ int reportUndefinedProcedures();
 // +----+-----------+
 
 int* getNextEntry(int* entry)  { return (int*) *entry; }
-int* getString(int* entry)     { return (int*) *(entry + 1);  }
-int  getLineNumber(int* entry) { return        *(entry + 2);  }
-int  getClass(int* entry)      { return        *(entry + 3);  }
-int  getType(int* entry)       { return        *(entry + 4);  }
-int  getValue(int* entry)      { return        *(entry + 5);  }
-int  getAddress(int* entry)    { return        *(entry + 6);  }
-int  getScope(int* entry)      { return        *(entry + 7);  }
-int  getFirstD(int* entry)     { return        *(entry + 8);  }
-int  getSecondD(int* entry)    { return        *(entry + 9);  }
-int* getNextField(int* entry)  { return        *(entry + 10); }
+int* getString(int* entry)     { return (int*) *(entry +  1); }
+int  getLineNumber(int* entry) { return        *(entry +  2); }
+int  getClass(int* entry)      { return        *(entry +  3); }
+int  getType(int* entry)       { return        *(entry +  4); }
+int  getValue(int* entry)      { return        *(entry +  5); }
+int  getAddress(int* entry)    { return        *(entry +  6); }
+int  getScope(int* entry)      { return        *(entry +  7); }
+int  getFirstD(int* entry)     { return        *(entry +  8); }
+int  getSecondD(int* entry)    { return        *(entry +  9); }
+int* getNextField(int* entry)  { return (int*) *(entry + 10); }
 
 void setNextEntry(int* entry, int* next)      { *entry        = (int) next; }
 void setString(int* entry, int* identifier)   { *(entry + 1)  = (int) identifier; }
@@ -453,6 +453,14 @@ void resetSymbolTables() {
   local_symbol_table   = (int*) 0;
   library_symbol_table = (int*) 0;
 }
+
+// -----------------------------------------------------------------
+// ------------------------- STRUCT TABLE --------------------------
+// -----------------------------------------------------------------
+
+void createStructTableEntry(int* entry, int* string, int line, int class, int type, int value, int address, int firstD, int secondD);
+int* searchStructTable(int* entry, int* string, int class);
+int* getStructTableEntry(int* string, int class);
 
 // -----------------------------------------------------------------
 // ---------------------------- PARSER -----------------------------
@@ -2109,6 +2117,35 @@ int reportUndefinedProcedures() {
   return undefined;
 }
 
+void createStructTableEntry(int* entry, int* string, int line, int class, int type, int value, int address, int firstD, int secondD) {
+  int* newEntry;
+
+  newEntry = malloc(3 * SIZEOFINTSTAR + 8 * SIZEOFINT);
+
+  setString(newEntry, string);
+  setLineNumber(newEntry, line);
+  setClass(newEntry, class);
+  setType(newEntry, type);
+  setValue(newEntry, value);
+  setAddress(newEntry, address);
+  setFirstD(newEntry, firstD);
+  setSecondD(newEntry, secondD);
+  setNextField(newEntry, (int*) 0);
+
+  while (getNextField(entry) != (int*) 0) {
+    entry = getNextField(entry);
+  }
+  setNextField(entry, newEntry);
+}
+
+int* searchStructTable(int* entry, int* string, int class){
+
+}
+
+int* getStructTableEntry(int* string, int class){
+
+}
+
 // -----------------------------------------------------------------
 // ---------------------------- PARSER -----------------------------
 // -----------------------------------------------------------------
@@ -3738,6 +3775,10 @@ int gr_type() {
 
       getSymbol();
     }
+  } else if (symbol == SYM_STRUCT) {
+    type = STRUCT_T;
+
+    getSymbol();
   } else
     syntaxErrorSymbol(SYM_INT);
 
@@ -4015,6 +4056,12 @@ void gr_cstar() {
   int  size;
   int  firstDimension;
   int  secondDimension;
+  int* entry;
+  int  fields;
+  int  sizeOfRecord;
+
+  fields = 0;
+  sizeOfRecord = 0;
 
   while (symbol != SYM_EOF) {
     while (lookForType()) {
@@ -4040,6 +4087,80 @@ void gr_cstar() {
         gr_procedure(variableOrProcedureName, type);
       } else
         syntaxErrorSymbol(SYM_IDENTIFIER);
+    } else if (symbol == SYM_STRUCT) {
+      type = STRUCT_T;
+
+      getSymbol();
+
+      if (symbol == SYM_IDENTIFIER) {
+        variableOrProcedureName = identifier;
+
+        getSymbol();
+
+        // struct identifier* variable
+        if (symbol == SYM_ASTERISK) {
+          getSymbol();
+
+          if (symbol == SYM_IDENTIFIER) {
+            //TODO: array of structs
+          } else {
+            syntaxErrorSymbol(SYM_IDENTIFIER);
+          }
+
+        // struct identifier {...}
+        } else if (symbol == SYM_LBRACE) {
+          // put the struct name into the symbol table
+          createSymbolTableEntry(GLOBAL_TABLE, variableOrProcedureName, lineNumber, VARIABLE, type, 0, 0, 0, 0);
+          getSymbol();
+
+          entry = getSymbolTableEntry(variableOrProcedureName, VARIABLE);
+
+          // look for fields
+          while (isNotRbraceOrEOF()) {
+            fields = fields + 1;
+            type = gr_type();
+
+            if (symbol == SYM_IDENTIFIER) {
+              firstDimension = 1;
+              secondDimension = 1;
+
+              getSymbol();
+
+              if (symbol == SYM_LBRACKET) {
+                getSymbol();
+
+                if (isLiteral()) {
+                  firstDimension = literal;
+                  size = literal;
+                  getSymbol();
+                } else
+                  syntaxErrorUnexpected();
+
+                checkRBracket();
+
+                if (symbol == SYM_LBRACKET) {
+                  getSymbol();
+
+                  if (isLiteral()) {
+                    secondDimension = literal;
+                    getSymbol();
+                  } else
+                    syntaxErrorUnexpected();
+
+                  checkRBracket();
+
+                  size = firstDimension * secondDimension;
+                }
+                type = ARRAYINT_T;
+              }
+              createStructTableEntry(entry, identifier, lineNumber, VARIABLE, type, 0, size, firstDimension, secondDimension);
+              sizeOfRecord = sizeOfRecord + size;
+            } else
+              syntaxErrorSymbol(SYM_IDENTIFIER);
+          }
+          setAddress(entry, sizeOfRecord);
+        }
+      }
     } else {
       type = gr_type();
 

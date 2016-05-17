@@ -311,9 +311,10 @@ int* sourceName = (int*) 0; // name of source file
 int  sourceFD   = 0;        // file descriptor of open source file
 
 struct r_t{
-  int a;
-  int b;
+  int  a;
+  int  b;
   int* c;
+  struct r_t* d;
 };
 
 struct r_t* hana;
@@ -4119,6 +4120,7 @@ void gr_cstar() {
             type = gr_type();
 
             if (symbol == SYM_IDENTIFIER) {
+              variableOrProcedureName = identifier;
               firstDimension = 1;
               secondDimension = 1;
               size = 1;
@@ -4151,6 +4153,18 @@ void gr_cstar() {
                   size = firstDimension * secondDimension;
                 }
                 type = ARRAYINT_T;
+
+                // inner struct
+              } else if (symbol == SYM_ASTERISK) {
+                getSymbol();
+
+                if (symbol == SYM_IDENTIFIER) {
+                  //TODO: array of structs
+                  entry = getSymbolTableEntry(variableOrProcedureName, VARIABLE);
+                  size = getAddress(entry);
+
+                  getSymbol();
+                }
               }
               createStructTableEntry(entry, identifier, lineNumber, VARIABLE, type, 0, size, firstDimension, secondDimension);
               sizeOfRecord = sizeOfRecord + size;

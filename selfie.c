@@ -403,6 +403,7 @@ int reportUndefinedProcedures();
 // |  8 | firstD    | size of first dimension
 // |  9 | secondD   | size of second dimension
 // | 10 | nextField | pointer to next field
+// | 11 | typeStruct| instance of which struct?  //TODO
 // +----+-----------+
 
 int* getNextEntry(int* entry)  { return (int*) *entry; }
@@ -482,6 +483,7 @@ int isPlusOrMinus();
 int isComparison();
 int isShift();
 int logicalAnd(int arg1, int arg2);
+int logicalOr(int arg1, int arg2);
 
 int lookForFactor();
 int lookForStatement();
@@ -522,7 +524,7 @@ void gr_initialization(int* name, int offset, int type);
 void gr_procedure(int* procedure, int returnType);
 void gr_cstar();
 int  gr_selector();
-void gr_record(int* varibaleOrProcedureName);
+void gr_record(int* varibaleOrProcedureName, int which);
 
 // ------------------------ GLOBAL VARIABLES -----------------------
 
@@ -2258,6 +2260,16 @@ int logicalAnd(int arg1, int arg2) {
     return 0;
 }
 
+int logicalOr(int arg1, int arg2) {
+  if (arg1 == 0) {
+    if (arg2 == 0)
+      return 0;
+    else
+      return 1;
+  } else
+    return 1;
+}
+
 int lookForFactor() {
   if (symbol == SYM_LPARENTHESIS)
     return 0;
@@ -3785,20 +3797,44 @@ int gr_type() {
 }
 
 void gr_variable(int offset) {
-  int type;
-  int size;
-  int firstDimension;
-  int secondDimension;
+  int* entry;
+  int  type;
+  int  size;
+  int  firstDimension;
+  int  secondDimension;
+  int* variableOrProcedureName;
 
   type = gr_type();
 
   if (symbol == SYM_IDENTIFIER) {
     firstDimension = 1;
     secondDimension = 1;
+    variableOrProcedureName = identifier;
 
     getSymbol();
 
-    if (symbol == SYM_LBRACKET) {
+    if (type == STRUCT_T) {
+      if (symbol == SYM_ASTERISK) {
+        getSymbol();
+
+        if (symbol == SYM_IDENTIFIER) {
+          //TODO: array of structs
+          entry = getSymbolTableEntry(variableOrProcedureName, VARIABLE);
+
+          // warning if type not declared by now
+          if (entry != ((int*) 0)) {
+            createSymbolTableEntry(LOCAL_TABLE, identifier, lineNumber, VARIABLE, type, 0, offset, 1, 1);
+          } else
+          syntaxErrorMessage((int*) "this struct type wasn't declared yet");
+
+          getSymbol();
+        } else
+        syntaxErrorSymbol(SYM_IDENTIFIER);
+      } else if (symbol == SYM_LBRACE) {
+        gr_record(variableOrProcedureName, LOCAL_TABLE);
+      }
+
+    } else if (symbol == SYM_LBRACKET) {
       getSymbol();
 
       if (isLiteral()) {
@@ -3806,7 +3842,7 @@ void gr_variable(int offset) {
         size = literal;
         getSymbol();
       } else
-        syntaxErrorUnexpected();
+      syntaxErrorUnexpected();
 
       checkNextSymbol(SYM_RBRACKET);
 
@@ -3817,7 +3853,7 @@ void gr_variable(int offset) {
           secondDimension = literal;
           getSymbol();
         } else
-          syntaxErrorUnexpected();
+        syntaxErrorUnexpected();
 
         checkNextSymbol(SYM_RBRACKET);
 
@@ -3830,7 +3866,11 @@ void gr_variable(int offset) {
 
       type = ARRAYINT_T;
     }
-    createSymbolTableEntry(LOCAL_TABLE, identifier, lineNumber, VARIABLE, type, 0, offset, firstDimension, secondDimension);
+
+    if (type != STRUCT_T) {
+      createSymbolTableEntry(LOCAL_TABLE, identifier, lineNumber, VARIABLE, type, 0, offset, firstDimension, secondDimension);
+    }
+
   } else {
     syntaxErrorSymbol(SYM_IDENTIFIER);
 
@@ -4001,7 +4041,7 @@ void gr_procedure(int* procedure, int returnType) {
 
     localVariables = 0;
 
-    while (symbol == SYM_INT) {
+    while (logicalOr(symbol == SYM_INT, symbol == SYM_STRUCT)) {
       localVariables = localVariables + 1;
 
       gr_variable(-localVariables * WORDSIZE);
@@ -4102,8 +4142,8 @@ void gr_cstar() {
 
             // warning if type not declared by now
             if (entry != ((int*) 0)) {
-              allocatedMemory = allocatedMemory + (getAddress(entry) * WORDSIZE);
-              createSymbolTableEntry(GLOBAL_TABLE, identifier, lineNumber, VARIABLE, type, 0, -allocatedMemory, getAddress(entry), 1);
+              allocatedMemory = allocatedMemory + WORDSIZE;
+              createSymbolTableEntry(GLOBAL_TABLE, identifier, lineNumber, VARIABLE, type, 0, -allocatedMemory, 1, 1);
             }
             else
               syntaxErrorMessage((int*) "this struct type wasn't declared yet");
@@ -4115,7 +4155,7 @@ void gr_cstar() {
 
         // struct identifier {...}
         } else if (symbol == SYM_LBRACE) {
-          gr_record(variableOrProcedureName);
+          gr_record(variableOrProcedureName, GLOBAL_TABLE);
         }
       }
     } else {
@@ -4249,7 +4289,7 @@ int gr_selector() {
   return type;
 }
 
-void gr_record(int* variableOrProcedureName) {
+void gr_record(int* variableOrProcedureName, int which) {
   int* entry;
   int  type;
   int  firstDimension;
@@ -4257,8 +4297,10 @@ void gr_record(int* variableOrProcedureName) {
   int  size;
   int  sizeOfRecord;
 
+  type = STRUCT_T;
+
   // put the struct name into the symbol table
-  createSymbolTableEntry(GLOBAL_TABLE, variableOrProcedureName, lineNumber, VARIABLE, type, 0, 0, 0, 0);
+  createSymbolTableEntry(which, variableOrProcedureName, lineNumber, VARIABLE, type, 0, 0, 0, 0);
   getSymbol();
 
   entry = getSymbolTableEntry(variableOrProcedureName, VARIABLE);
@@ -7483,6 +7525,7 @@ int main(int argc, int* argv) {
   int paramArr[10];
   int paramArr2[5];
   int local2DArr[10][5];
+  struct r_t* moritz;
 
   initLibrary();
 
@@ -7507,7 +7550,6 @@ int main(int argc, int* argv) {
   println();
   print(itoa(globalArray2[3][1], string_buffer, 10, 0, 0));
   println();
-
 
   // local array tests
   localArray[7] = 55;

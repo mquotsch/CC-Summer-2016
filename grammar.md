@@ -19,7 +19,7 @@ letter           = "a" | ... | "z" | "A" | ... | "Z" .
 
 identifier       = letter { letter | digit | "_" } .
 
-type             = "int" [ "*" ] .
+type             = "int" [ "*" ] | "struct" .
 
 cast             = "(" type ")" .
 
@@ -29,7 +29,7 @@ call             = identifier "(" [ expression { "," expression } ] ")" .
 
 literal          = integer | "'" ascii_character "'" .
 
-factor           = [ cast ] 
+factor           = [ cast ]
                     ( [ "*" ] ( identifier [ selector ] | "(" expression ")" ) |
                       call |
                       literal |
@@ -43,13 +43,13 @@ shiftExpression  = simpleExpression [ ( "<<" | ">>" ) simpleExpression ] .
 
 expression       = shiftExpression [ ( "==" | "!=" | "<" | ">" | "<=" | ">=" ) shiftExpression ] .
 
-while            = "while" "(" expression ")" 
+while            = "while" "(" expression ")"
                              ( statement |
                                "{" { statement } "}" ) .
 
-if               = "if" "(" expression ")" 
-                             ( statement | 
-                               "{" { statement } "}" ) 
+if               = "if" "(" expression ")"
+                             ( statement |
+                               "{" { statement } "}" )
                          [ "else"
                              ( statement |
                                "{" { statement } "}" ) ] .
@@ -58,18 +58,19 @@ return           = "return" [ expression ] .
 
 statement        = ( [ "*" ] identifier [ selector ] | "*" "(" expression ")" ) "="
                       expression ";" |
-                    call ";" | 
-                    while | 
-                    if | 
+                    call ";" |
+                    while |
+                    if |
                     return ";" .
 
-variable         = type identifier [ "[" integer "]" ] [ "[" integer "]" ] .
+variable         = type [ identifier "*" ] identifier [ "[" integer "]" ] [ "[" integer "]" ] .
 
-procedure        = "(" [ variable { "," variable } ] ")" 
-                    ( ";" | "{" { variable ";" } { statement } "}" ) .
+procedure        = "(" [ variable { "," variable } ] ")"
+                    ( ";" | "{" { (variable ";" | record ) } { statement } "}" ) .
 
-record           = "struct" identifier "{" { variable } "}" .
+record           = "struct" identifier "{" { variable } "}" ";" .
 
 cstar            = { type identifier [ "[" integer "]" ] [ "[" integer "]" ] [ "=" [ cast ] [ "-" ] literal ] ";" |
-                   ( "void" | type ) identifier procedure } .
+                   ( "void" | type ) identifier procedure |
+                   record } .
 ```

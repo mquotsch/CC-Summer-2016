@@ -406,6 +406,20 @@ int reportUndefinedProcedures();
 // | 11 | typeStruct| instance of which struct?  //TODO
 // +----+-----------+
 
+struct symbolTable {
+  int* next;
+  int* string;
+  int  line;
+  int  class;
+  int  type;
+  int  value;
+  int  address;
+  int  scope;
+  int  firstD;
+  int  secondD;
+  int* nextField;
+};
+
 int* getNextEntry(int* entry)  { return (int*) *entry; }
 int* getString(int* entry)     { return (int*) *(entry +  1); }
 int  getLineNumber(int* entry) { return        *(entry +  2); }
@@ -4090,11 +4104,6 @@ void gr_cstar() {
   int  firstDimension;
   int  secondDimension;
   int* entry;
-  int  fields;
-  int  sizeOfRecord;
-
-  fields = 0;
-  sizeOfRecord = 0;
 
   while (symbol != SYM_EOF) {
     while (lookForType()) {

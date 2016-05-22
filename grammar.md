@@ -30,7 +30,7 @@ call             = identifier "(" [ expression { "," expression } ] ")" .
 literal          = integer | "'" ascii_character "'" .
 
 factor           = [ cast ]
-                    ( [ "*" ] ( identifier [ selector ] | "(" expression ")" ) |
+                    ( [ "*" ] ( identifier [ [ selector ] | structAccess ] | "(" expression ")" ) |
                       call |
                       literal |
                       """ { ascii_character } """ ) .
@@ -56,7 +56,7 @@ if               = "if" "(" expression ")"
 
 return           = "return" [ expression ] .
 
-statement        = ( [ "*" ] identifier [ selector ] | "*" "(" expression ")" ) "="
+statement        = ( [ "*" ] identifier [ selector ] | structAccess | "*" "(" expression ")" ) "="
                       expression ";" |
                     call ";" |
                     while |
@@ -65,12 +65,14 @@ statement        = ( [ "*" ] identifier [ selector ] | "*" "(" expression ")" ) 
 
 variable         = type [ identifier "*" ] identifier [ "[" integer "]" ] [ "[" integer "]" ] .
 
+structAccess     = identifier "->" identifier .
+
 procedure        = "(" [ variable { "," variable } ] ")"
                     ( ";" | "{" { (variable ";" | record ) } { statement } "}" ) .
 
 record           = "struct" identifier "{" { variable } "}" ";" .
 
-cstar            = { type identifier [ "[" integer "]" ] [ "[" integer "]" ] [ "=" [ cast ] [ "-" ] literal ] ";" |
+cstar            = { ( type [ identifier "*" ] identifier [ "[" integer "]" ] [ "[" integer "]" ] | structAccess ) [ "=" [ cast ] [ "-" ] literal ] ";" |
                    ( "void" | type ) identifier procedure |
                    record } .
 ```

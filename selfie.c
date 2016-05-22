@@ -282,8 +282,9 @@ int SYM_RSHIFT       = 29; // >>
 int SYM_LBRACKET     = 30; // [
 int SYM_RBRACKET     = 31; // ]
 int SYM_STRUCT       = 32; // struct
+int SYM_ARROW        = 33; // ->
 
-int SYMBOLS[33][2]; // array of strings representing symbols
+int SYMBOLS[34][2]; // array of strings representing symbols
 
 int maxIdentifierLength = 64; // maximum number of characters in an identifier
 int maxIntegerLength    = 10; // maximum number of characters in an integer
@@ -357,13 +358,14 @@ void initScanner () {
   SYMBOLS[SYM_LBRACKET][0]     = (int) "[";
   SYMBOLS[SYM_RBRACKET][0]     = (int) "]";
   SYMBOLS[SYM_STRUCT][0]       = (int) "struct";
+  SYMBOLS[SYM_ARROW][0]        = (int) "->";
 
   character = CHAR_EOF;
   symbol    = SYM_EOF;
 
   i = 0;
 
-  while (i < 33){
+  while (i < 34){
     SYMBOLS[i][1] = 0;
 
     i = i + 1;
@@ -1925,7 +1927,12 @@ int getSymbol() {
   } else if (character == CHAR_DASH) {
     getCharacter();
 
-    symbol = SYM_MINUS;
+    if (character == CHAR_GT) {
+      getCharacter();
+
+      symbol = SYM_ARROW;
+    } else
+      symbol = SYM_MINUS;
 
   } else if (character == CHAR_ASTERISK) {
     getCharacter();
@@ -4544,7 +4551,7 @@ void printOccurrences(){
 
   i = 0;
 
-  while (i < 33){
+  while (i < 34){
     printSymbol(i);
     print((int*) ": ");
     print(itoa(SYMBOLS[i][1], string_buffer, 10, 0, 0));

@@ -517,6 +517,7 @@ void syntaxErrorUnexpected();
 int* putType(int type);
 void typeWarning(int expected, int found);
 void checkNextSymbol(int symbol);
+void checkType(int expected, int found);
 
 int* getVariable(int* variable);
 int  load_variable(int* variable);
@@ -2499,6 +2500,10 @@ void checkNextSymbol(int nextSymbol) {
     getSymbol();
 }
 
+void checkType(int expected, int found) {
+  if (found != expected)
+    typeWarning(expected, found);
+}
 
 int* getVariable(int* variable) {
   int* entry;
@@ -2599,8 +2604,7 @@ void calculate2DOffset(int* entry) {
 
   type = gr_expression();
 
-  if (type != INT_T)
-    typeWarning(INT_T, type);
+  checkType(INT_T, type);
 
   // previousTemp + index of 2D array --> previousTemp
   emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_ADDU);
@@ -2788,21 +2792,13 @@ int gr_factor(int* attribute) {
 
       cast = gr_type();
 
-      if (symbol == SYM_RPARENTHESIS)
-        getSymbol();
-      else
-        syntaxErrorSymbol(SYM_RPARENTHESIS);
+      checkNextSymbol(SYM_RPARENTHESIS);
 
     // not a cast: "(" expression ")"
     } else {
       type = gr_expression();
 
-      if (symbol == SYM_RPARENTHESIS)
-        getSymbol();
-      else
-        syntaxErrorSymbol(SYM_RPARENTHESIS);
-
-      // assert: allocatedTemporaries == n + 1
+      checkNextSymbol(SYM_RPARENTHESIS);
 
       return type;
     }
@@ -2824,15 +2820,11 @@ int gr_factor(int* attribute) {
 
       type = gr_expression();
 
-      if (symbol == SYM_RPARENTHESIS)
-        getSymbol();
-      else
-        syntaxErrorSymbol(SYM_RPARENTHESIS);
+      checkNextSymbol(SYM_RPARENTHESIS);
     } else
       syntaxErrorUnexpected();
 
-    if (type != INTSTAR_T)
-      typeWarning(INTSTAR_T, type);
+    checkType(INTSTAR_T, type);
 
     // dereference
     emitIFormat(OP_LW, currentTemporary(), currentTemporary(), 0);
@@ -2977,8 +2969,7 @@ int gr_term(int *attribute) {
         }
         *attribute = lTempValue;
       } else {
-        if (ltype != rtype)
-          typeWarning(ltype, rtype);
+        checkType(ltype, rtype);
 
         load_integer(lTempValue);
 
@@ -3001,8 +2992,7 @@ int gr_term(int *attribute) {
     // variable [operator] factor
     } else {
       if (rTempFlag == 0) {
-        if (ltype != rtype)
-          typeWarning(ltype, rtype);
+        checkType(ltype, rtype);
 
         if (operatorSymbol == SYM_ASTERISK) {
           emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_MULTU);
@@ -3040,8 +3030,7 @@ int gr_term(int *attribute) {
         else
           tempReg = secondPreviousTemporary();
 
-        if (ltype != INT_T)
-          typeWarning(ltype, INT_T);
+        checkType(INT_T, ltype);
 
         if (operatorSymbol == SYM_ASTERISK) {
           emitRFormat(OP_SPECIAL, tempReg, currentTemporary(), 0, FCT_MULTU);
@@ -3059,8 +3048,7 @@ int gr_term(int *attribute) {
 
         if (*(attribute + 1) == 0){
           operatorSymbol = tempOperatorSymbol;
-          if (ltype != rtype)
-            typeWarning(ltype, rtype);
+          checkType(ltype, rtype);
 
           if (operatorSymbol == SYM_ASTERISK) {
             emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_MULTU);
@@ -3128,11 +3116,8 @@ int gr_simpleExpression(int* attribute) {
   // assert: allocatedTemporaries == n + 1
 
   if (sign) {
-    if (ltype != INT_T) {
-      typeWarning(INT_T, ltype);
-
-      ltype = INT_T;
-    }
+    checkType(INT_T, ltype);
+    ltype = INT_T;
 
     if (*(attribute + 1) == 0) {
       emitRFormat(OP_SPECIAL, REG_ZR, currentTemporary(), currentTemporary(), FCT_SUBU);
@@ -3174,8 +3159,7 @@ int gr_simpleExpression(int* attribute) {
           load_integer(lTempValue);
           emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_ADDU);
         } else if (operatorSymbol == SYM_MINUS) {
-          if (ltype != rtype)
-            typeWarning(ltype, rtype);
+          checkType(ltype, rtype);
 
           load_integer(lTempValue);
           emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SUBU);
@@ -3196,8 +3180,7 @@ int gr_simpleExpression(int* attribute) {
 
           emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_ADDU);
         } else if (operatorSymbol == SYM_MINUS) {
-          if (ltype != rtype)
-            typeWarning(ltype, rtype);
+          checkType(ltype, rtype);
 
           emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SUBU);
         }
@@ -3259,8 +3242,7 @@ int gr_simpleExpression(int* attribute) {
 
             emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_ADDU);
           } else if (operatorSymbol == SYM_MINUS) {
-            if (ltype != rtype)
-              typeWarning(ltype, rtype);
+            checkType(ltype, rtype);
 
             emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SUBU);
           }
@@ -3320,14 +3302,12 @@ int gr_shiftExpression(int* attribute) {
         *attribute = lTempValue;
       } else {
         if (operatorSymbol == SYM_LSHIFT) {
-          if (rtype == INTSTAR_T)
-            typeWarning(INT_T, rtype);
+          checkType(INT_T, rtype);
 
           load_integer(lTempValue);
           emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SLLV);
         } else if (operatorSymbol == SYM_RSHIFT) {
-          if (rtype == INTSTAR_T)
-            typeWarning(INT_T, rtype);
+          checkType(INT_T, rtype);
 
           load_integer(lTempValue);
           emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SRLV);
@@ -3338,10 +3318,8 @@ int gr_shiftExpression(int* attribute) {
     // variable [operator] factor
     } else {
       if (rTempFlag == 0) {
-        if (ltype == INTSTAR_T)
-          typeWarning(INT_T, ltype);
-        if (rtype == INTSTAR_T)
-          typeWarning(INT_T, rtype);
+        checkType(INT_T, ltype);
+        checkType(INT_T, rtype);
 
         if (operatorSymbol == SYM_LSHIFT) {
           emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SLLV);
@@ -3356,8 +3334,7 @@ int gr_shiftExpression(int* attribute) {
         // load folded value into a register
         load_integer(rTempValue);
 
-        if (ltype == INTSTAR_T)
-          typeWarning(INT_T, ltype);
+        checkType(INT_T, ltype);
 
         if (operatorSymbol == SYM_LSHIFT) {
           emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SLLV);
@@ -3414,8 +3391,7 @@ int gr_expression() {
 
     // assert: allocatedTemporaries == n + 2
 
-    if (ltype != rtype)
-      typeWarning(ltype, rtype);
+    checkType(ltype, rtype);
 
     if (operatorSymbol == SYM_EQUALITY) {
       // subtract, if result = 0 then 1, else 0
@@ -3520,7 +3496,6 @@ void gr_while() {
             getSymbol();
           else {
             syntaxErrorSymbol(SYM_RBRACE);
-
             exit(-1);
           }
         }
@@ -3697,8 +3672,7 @@ void gr_statement() {
     if (symbol == SYM_IDENTIFIER) {
       ltype = load_variable(identifier);
 
-      if (ltype != INTSTAR_T)
-        typeWarning(INTSTAR_T, ltype);
+      checkType(INTSTAR_T, ltype);
 
       getSymbol();
 
@@ -3708,8 +3682,7 @@ void gr_statement() {
 
         rtype = gr_expression();
 
-        if (rtype != INT_T)
-          typeWarning(INT_T, rtype);
+        checkType(INT_T, rtype);
 
         emitIFormat(OP_SW, previousTemporary(), currentTemporary(), 0);
 
@@ -3725,8 +3698,7 @@ void gr_statement() {
 
       ltype = gr_expression();
 
-      if (ltype != INTSTAR_T)
-        typeWarning(INTSTAR_T, ltype);
+      checkType(INTSTAR_T, ltype);
 
       if (symbol == SYM_RPARENTHESIS) {
         getSymbol();
@@ -3737,8 +3709,7 @@ void gr_statement() {
 
           rtype = gr_expression();
 
-          if (rtype != INT_T)
-            typeWarning(INT_T, rtype);
+          checkType(INT_T, rtype);
 
           emitIFormat(OP_SW, previousTemporary(), currentTemporary(), 0);
 
@@ -3779,8 +3750,7 @@ void gr_statement() {
 
       rtype = gr_expression();
 
-      if (ltype != rtype)
-        typeWarning(ltype, rtype);
+      checkType(ltype, rtype);
 
       emitIFormat(OP_SW, getScope(entry), currentTemporary(), getAddress(entry));
 
@@ -3963,10 +3933,7 @@ void gr_initialization(int* name, int offset, int type) {
 
       cast = gr_type();
 
-      if (symbol == SYM_RPARENTHESIS)
-        getSymbol();
-      else
-        syntaxErrorSymbol(SYM_RPARENTHESIS);
+      checkNextSymbol(SYM_RPARENTHESIS);
     }
 
     // optional: -
@@ -4005,8 +3972,7 @@ void gr_initialization(int* name, int offset, int type) {
     syntaxErrorSymbol(SYM_ASSIGN);
 
   if (hasCast) {
-    if (type != cast)
-      typeWarning(type, cast);
+    checkType(type, cast);
   } else if (type != INT_T)
     typeWarning(type, INT_T);
 
@@ -4093,8 +4059,7 @@ void gr_procedure(int* procedure, int returnType) {
       setLineNumber(entry, lineNumber);
       setAddress(entry, functionStart);
 
-      if (getType(entry) != returnType)
-        typeWarning(getType(entry), returnType);
+      checkType(getType(entry), returnType);
 
       setType(entry, returnType);
     }
@@ -4316,8 +4281,7 @@ int gr_selector() {
 
     type = getType(entry);
 
-    if (type != ARRAYINT_T)
-      typeWarning(ARRAYINT_T, type);
+    checkType(ARRAYINT_T, type);
 
     getSymbol();
 
@@ -7608,7 +7572,6 @@ void testing2D(int array1[10][5]) {
 }
 
 int main(int argc, int* argv) {
-
   int x;
   int y;
   int localArray[10];
@@ -7652,73 +7615,6 @@ int main(int argc, int* argv) {
   print(itoa(x, string_buffer, 10, 0, 0));
   println();
   print((int*) "---");
-  println();
-
-  // global array tests
-  f();
-  print(itoa(globalArray[3], string_buffer, 10, 0, 0));
-  println();
-  print(itoa(globalArray2[3][1], string_buffer, 10, 0, 0));
-  println();
-
-  // local array tests
-  localArray[7] = 55;
-  localArray[2] = 2;
-  print(itoa(localArray[7], string_buffer, 10, 0, 0));
-  println();
-  print((int*) "---");
-  println();
-  localArray[3] = localArray[2] + localArray[7];
-  print(itoa(localArray[3], string_buffer, 10, 0, 0));
-  println();
-
-  // tests with variables
-  x = 0;
-  y = 2 * 2 + 1 - 1 + 1;
-  localArray[x] = 4;
-  print(itoa(localArray[0], string_buffer, 10, 0, 0));
-  println();
-  localArray[y] = 200;
-  print(itoa(localArray[y], string_buffer, 10, 0, 0));
-  println();
-  print((int*) "---");
-  println();
-
-  // tests on 1D arrays as parameters
-  paramArr[9] = 5;
-  testing1D(paramArr);
-  print(itoa(paramArr[9], string_buffer, 10, 0, 0));
-  println();
-  print((int*) "---");
-  println();
-
-  // 1D arrays with 2 parameters
-  paramArr[6] = 4;
-  testing1D2(paramArr, paramArr2);
-  print(itoa(paramArr[3], string_buffer, 10, 0, 0));
-  println();
-  print(itoa(paramArr2[5 - 2], string_buffer, 10, 0, 0));
-  println();
-  print((int*) "---");
-  println();
-
-  // tests on local 2D arrays
-  local2DArr[2][1] = 7;
-  local2DArr[2][2] = 5;
-  local2DArr[2][3] = local2DArr[2][1] + local2DArr[2][2];
-  print(itoa(local2DArr[2][1], string_buffer, 10, 0, 0));
-  println();
-  print(itoa(local2DArr[2][3], string_buffer, 10, 0, 0));
-  println();
-  print((int*) "---");
-  println();
-
-  // tests on 2D arrays as parameters
-  testing2D(local2DArr);
-  print(itoa(local2DArr[3][3], string_buffer, 10, 0, 0));
-  println();
-  print((int*) "Solution: 32, 17, 44444, 27, 75, 55, 57, 4, 200, 399, 2, 2, 7, 12, 66");
-  println();
   println();
 
   if (selfie(argc, (int*) argv) != 0) {

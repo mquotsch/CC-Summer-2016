@@ -365,7 +365,7 @@ void initScanner () {
 
   i = 0;
 
-  while (i < 34){
+  while (i < 34) {
     SYMBOLS[i][1] = 0;
 
     i = i + 1;
@@ -2759,8 +2759,6 @@ int gr_factor(int* attribute) {
   int  cast;
   int  type;
   int* entry;
-  int* structTypeName;
-  int* field;
 
   int* variableOrProcedureName;
 
@@ -2792,6 +2790,16 @@ int gr_factor(int* attribute) {
 
       cast = gr_type();
 
+      checkNextSymbol(SYM_RPARENTHESIS);
+
+    // cast: "(" "struct" identifier "*" ")"
+    } else if (symbol == SYM_STRUCT) {
+      hasCast = 1;
+
+      cast = gr_type();
+
+      checkNextSymbol(SYM_IDENTIFIER);
+      checkNextSymbol(SYM_ASTERISK);
       checkNextSymbol(SYM_RPARENTHESIS);
 
     // not a cast: "(" expression ")"
@@ -2910,10 +2918,7 @@ int gr_factor(int* attribute) {
 
     type = gr_expression();
 
-    if (symbol == SYM_RPARENTHESIS)
-      getSymbol();
-    else
-      syntaxErrorSymbol(SYM_RPARENTHESIS);
+    checkNextSymbol(SYM_RPARENTHESIS);
 
   } else
     syntaxErrorUnexpected();
@@ -3046,7 +3051,7 @@ int gr_term(int *attribute) {
         }
         tfree(1);
 
-        if (*(attribute + 1) == 0){
+        if (*(attribute + 1) == 0) {
           operatorSymbol = tempOperatorSymbol;
           checkType(ltype, rtype);
 
@@ -3229,7 +3234,7 @@ int gr_simpleExpression(int* attribute) {
           tfree(1);
         }
 
-        if (*(attribute + 1) == 0){
+        if (*(attribute + 1) == 0) {
           operatorSymbol = tempOperatorSymbol;
 
           if (operatorSymbol == SYM_PLUS) {
@@ -3614,10 +3619,7 @@ void gr_return(int returnType) {
 
   // assert: allocatedTemporaries == 0
 
-  if (symbol == SYM_RETURN)
-    getSymbol();
-  else
-    syntaxErrorSymbol(SYM_RETURN);
+  checkNextSymbol(SYM_RETURN);
 
   // optional: expression
   if (symbol != SYM_SEMICOLON) {
@@ -3650,8 +3652,6 @@ void gr_statement() {
   int  rtype;
   int* variableOrProcedureName;
   int* entry;
-  int* structTypeName;
-  int* field;
 
   // assert: allocatedTemporaries == 0;
 
@@ -4019,10 +4019,7 @@ void gr_procedure(int* procedure, int returnType) {
         entry    = getNextEntry(entry);
       }
 
-      if (symbol == SYM_RPARENTHESIS)
-        getSymbol();
-      else
-        syntaxErrorSymbol(SYM_RPARENTHESIS);
+      checkNextSymbol(SYM_RPARENTHESIS);
     } else
       getSymbol();
   } else
@@ -4584,12 +4581,12 @@ void selfie_compile() {
     exit(-1);
 }
 
-void printOccurrences(){
+void printOccurrences() {
   int i;
 
   i = 0;
 
-  while (i < 34){
+  while (i < 34) {
     printSymbol(i);
     print((int*) ": ");
     print(itoa(SYMBOLS[i][1], string_buffer, 10, 0, 0));
@@ -7573,11 +7570,6 @@ void testing2D(int array1[10][5]) {
 
 int main(int argc, int* argv) {
   int x;
-  int y;
-  int localArray[10];
-  int paramArr[10];
-  int paramArr2[5];
-  int local2DArr[10][5];
   struct r_t* localStruct;
 
   initLibrary();
@@ -7598,7 +7590,7 @@ int main(int argc, int* argv) {
   println();
 
   // local structs test
-  localStruct = malloc(12);
+  localStruct = (struct localStruct*) malloc(12);
   localStruct -> a = 32;
   x = localStruct -> a + localStruct -> a;
   print(itoa(localStruct -> a, string_buffer, 10, 0, 0));
@@ -7609,7 +7601,7 @@ int main(int argc, int* argv) {
   println();
 
   // global structs testen
-  globalStruct = malloc(12);
+  globalStruct = (struct globalStruct*) malloc(12);
   globalStruct -> a = 44444;
   x = globalStruct -> a;
   print(itoa(x, string_buffer, 10, 0, 0));

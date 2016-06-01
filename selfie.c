@@ -142,6 +142,8 @@ int CHAR_SINGLEQUOTE  = 39; // ASCII code 39 = '
 int CHAR_DOUBLEQUOTE  = '"';
 int CHAR_LBRACKET     = '[';
 int CHAR_RBRACKET     = ']';
+int CHAR_AND          = '&';
+int CHAR_OR           = '|';
 
 int SIZEOFINT     = 4; // must be the same as WORDSIZE
 int SIZEOFINTSTAR = 4; // must be the same as WORDSIZE
@@ -283,8 +285,11 @@ int SYM_LBRACKET     = 30; // [
 int SYM_RBRACKET     = 31; // ]
 int SYM_STRUCT       = 32; // struct
 int SYM_ARROW        = 33; // ->
+int SYM_AND          = 34; // &&
+int SYM_OR           = 35; // ||
+int SYM_NOT          = 36; // !
 
-int SYMBOLS[34][2]; // array of strings representing symbols
+int SYMBOLS[37][2]; // array of strings representing symbols
 
 int maxIdentifierLength = 64; // maximum number of characters in an identifier
 int maxIntegerLength    = 10; // maximum number of characters in an integer
@@ -359,13 +364,16 @@ void initScanner () {
   SYMBOLS[SYM_RBRACKET][0]     = (int) "]";
   SYMBOLS[SYM_STRUCT][0]       = (int) "struct";
   SYMBOLS[SYM_ARROW][0]        = (int) "->";
+  SYMBOLS[SYM_AND][0]          = (int) "&&";
+  SYMBOLS[SYM_OR][0]           = (int) "||";
+  SYMBOLS[SYM_NOT][0]          = (int) "!";
 
   character = CHAR_EOF;
   symbol    = SYM_EOF;
 
   i = 0;
 
-  while (i < 34) {
+  while (i < 37) {
     SYMBOLS[i][1] = 0;
 
     i = i + 1;
@@ -2021,17 +2029,39 @@ int getSymbol() {
   } else if (character == CHAR_EXCLAMATION) {
     getCharacter();
 
-    if (character == CHAR_EQUAL)
+    if (character == CHAR_EQUAL) {
       getCharacter();
-    else
+      symbol = SYM_NOTEQ;
+    } else if (character == CHAR_LPARENTHESIS) {
+      symbol = SYM_NOT;
+    } else {
       syntaxErrorCharacter(CHAR_EQUAL);
-
-    symbol = SYM_NOTEQ;
-
+      symbol = SYM_NOTEQ;
+    }
   } else if (character == CHAR_PERCENTAGE) {
     getCharacter();
 
     symbol = SYM_MOD;
+
+  } else if (character == CHAR_AND) {
+    getCharacter();
+
+    if (character == CHAR_AND)
+      getCharacter();
+    else
+      syntaxErrorCharacter(CHAR_AND);
+
+    symbol = SYM_AND;
+
+  } else if (character == CHAR_OR) {
+    getCharacter();
+
+    if (character == CHAR_OR)
+      getCharacter();
+    else
+      syntaxErrorCharacter(CHAR_OR);
+
+    symbol = SYM_OR;
 
   } else {
     printLineNumber((int*) "error", lineNumber);
@@ -4586,7 +4616,7 @@ void printOccurrences() {
 
   i = 0;
 
-  while (i < 34) {
+  while (i < 37) {
     printSymbol(i);
     print((int*) ": ");
     print(itoa(SYMBOLS[i][1], string_buffer, 10, 0, 0));

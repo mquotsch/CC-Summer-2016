@@ -7548,26 +7548,6 @@ int selfie(int argc, int* argv) {
   return 0;
 }
 
-void f() {
-  globalArray[3] = 27;
-  globalArray2[3][1] = 75;
-}
-
-void testing1D(int array[3]) {
-  array[9] = 399;
-}
-
-void testing1D2(int array1[3], int array2[2]) {
-  array1[5] = 888;
-  array2[3] = 2;
-  array1[3] = array1[6] - array2[3];
-}
-
-void testing2D(int array1[10][5]) {
-  array1[5][2] = 33;
-  array1[3][3] = array1[5][2] + array1[5][2];
-}
-
 int main(int argc, int* argv) {
   int x;
   struct r_t* localStruct;

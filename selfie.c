@@ -510,8 +510,6 @@ int isPlusOrMinus();
 int isComparison();
 int isShift();
 int isBoolean();
-int logicalAnd(int arg1, int arg2);
-int logicalOr(int arg1, int arg2);
 int getSizeOfRecord(int* structInstance);
 
 int lookForFactor();
@@ -597,8 +595,6 @@ int allocatedMemory = 0; // number of bytes for global variables and strings
 int returnBranches = 0; // fixup chain for return statements
 
 int* currentProcedureName = (int*) 0; // name of currently parsed procedure
-
-int CONSTANT = 1; // represents the constant value of attribute
 
 int globalArray[10];
 
@@ -830,6 +826,7 @@ void emitJFormat(int opcode, int instr_index);
 
 void fixup_relative(int fromAddress);
 void fixup_absolute(int fromAddress, int toAddress);
+void fixupChain(int* chain);
 void fixlink_absolute(int fromAddress, int toAddress);
 
 int copyStringToBinary(int* s, int a);
@@ -2349,27 +2346,6 @@ int isBoolean() {
     return 0;
 }
 
-int logicalAnd(int arg1, int arg2) {
-  if (arg1) {
-    if (arg2)
-      return 1;
-    else
-      return 0;
-  }
-  else
-    return 0;
-}
-
-int logicalOr(int arg1, int arg2) {
-  if (arg1 == 0) {
-    if (arg2 == 0)
-      return 0;
-    else
-      return 1;
-  } else
-    return 1;
-}
-
 int getSizeOfRecord(int* structInstance) {
   int* entry;
 
@@ -2968,7 +2944,7 @@ int gr_factor(int* attribute) {
   // integer?
   } else if (symbol == SYM_INTEGER) {
     *attribute = literal;
-    *(attribute + 1) = CONSTANT;
+    *(attribute + 1) = 1;
 
     getSymbol();
 
@@ -3094,7 +3070,7 @@ int gr_term(int *attribute) {
 
         tfree(1);
       } else {
-        while (logicalAnd(symbol == SYM_ASTERISK, *(attribute + 1))) {
+        while (symbol == SYM_ASTERISK && *(attribute + 1)) {
           tempOperatorSymbol = symbol;
           getSymbol();
           rtype = gr_factor(attribute);
@@ -3271,7 +3247,7 @@ int gr_simpleExpression(int* attribute) {
         }
         tfree(1);
       } else {
-        while (logicalAnd(isPlusOrMinus(), *(attribute + 1))) {
+        while (isPlusOrMinus() && *(attribute + 1)) {
           tempOperatorSymbol = symbol;
           getSymbol();
           rtype = gr_term(attribute);
@@ -3449,7 +3425,7 @@ int gr_comparisonExpression(int* attribute) {
 
   ltype = gr_shiftExpression(attribute);
 
-  if (*(attribute + 1) == CONSTANT) {
+  if (*(attribute + 1)) {
     if (*attribute < 0) {
       load_integer(-*attribute);
       emitRFormat(OP_SPECIAL, REG_ZR, currentTemporary(), currentTemporary(), FCT_SUBU);
@@ -3467,7 +3443,7 @@ int gr_comparisonExpression(int* attribute) {
 
     rtype = gr_shiftExpression(attribute);
 
-    if (*(attribute + 1) == CONSTANT)
+    if (*(attribute + 1))
       load_integer(*attribute);
 
     // assert: allocatedTemporaries == n + 2
@@ -3539,10 +3515,9 @@ int gr_comparisonExpression(int* attribute) {
 
 int gr_expression() {
   int  ltype;
-  int  operatorSymbol;
   int  rtype;
+  int  operatorSymbol;
   int* attribute;
-  int* entry;
 
   //initialisation of the attribute
   attribute = malloc(4 * SIZEOFINT + 2 * SIZEOFINTSTAR);
@@ -3552,16 +3527,15 @@ int gr_expression() {
   if (isBoolean()) {
     operatorSymbol = symbol;
 
+    checkType(INT_T, ltype);
+
     if (operatorSymbol == SYM_AND) {
       setFChain(attribute, createFixupChainEntry(binaryLength, getFChain(attribute)));
-
       emitIFormat(OP_BEQ, REG_ZR, currentTemporary(), 0);
 
     } else if (operatorSymbol == SYM_OR) {
       setTChain(attribute, createFixupChainEntry(binaryLength, getTChain(attribute)));
-
       emitIFormat(OP_BNE, REG_ZR, currentTemporary(), 0);
-
     }
   }
 
@@ -3570,34 +3544,25 @@ int gr_expression() {
 
     getSymbol();
 
+    // previous factor not needed anymore
     tfree(1);
 
     rtype = gr_comparisonExpression(attribute);
 
+    checkType(ltype, rtype);
+
     if (operatorSymbol == SYM_AND) {
       setFChain(attribute, createFixupChainEntry(binaryLength, getFChain(attribute)));
-
       emitIFormat(OP_BEQ, REG_ZR, currentTemporary(), 0);
+
     } else if (operatorSymbol == SYM_OR) {
       setTChain(attribute, createFixupChainEntry(binaryLength, getTChain(attribute)));
-
       emitIFormat(OP_BNE, REG_ZR, currentTemporary(), 0);
     }
   }
 
-  entry = getFChain(attribute);
-
-  while (entry != (int*) 0) {
-    fixup_relative(getBinaryLength(entry));
-    entry = getNextEntry(entry);
-  }
-
-  entry = getTChain(attribute);
-
-  while (entry != (int*) 0) {
-    fixup_relative(getBinaryLength(entry));
-    entry = getNextEntry(entry);
-  }
+  fixupChain(getTChain(attribute));
+  fixupChain(getFChain(attribute));
 
   return ltype;
 }
@@ -4206,7 +4171,7 @@ void gr_procedure(int* procedure, int returnType) {
 
     localVariables = 0;
 
-    while (logicalOr(symbol == SYM_INT, symbol == SYM_STRUCT)) {
+    while (symbol == SYM_INT || symbol == SYM_STRUCT) {
       localVariables = localVariables + 1;
 
       gr_variable(-localVariables * WORDSIZE);
@@ -5012,6 +4977,17 @@ void fixup_relative(int fromAddress) {
 void fixup_absolute(int fromAddress, int toAddress) {
   storeBinary(fromAddress,
     encodeJFormat(getOpcode(loadBinary(fromAddress)), toAddress / WORDSIZE));
+}
+
+void fixupChain(int* chain) {
+  int* entry;
+
+  entry = chain;
+
+  while (entry != (int*) 0) {
+    fixup_relative(getBinaryLength(entry));
+    entry = getNextEntry(entry);
+  }
 }
 
 void fixlink_absolute(int fromAddress, int toAddress) {
@@ -7708,6 +7684,23 @@ int main(int argc, int* argv) {
   argv = argv + 1;
 
   print((int*) "This is RSQ Selfie");
+  println();
+
+  x = 1 && 1;
+  y = 0 && 0;
+
+  if(y && 1 && 0 && x)
+    print((int*) "not correct");
+  else
+    print((int*) "correct");
+
+  println();
+
+  if (x || 0 || 0)
+    print((int*) "correct");
+  else
+    print((int*) "not correct");
+
   println();
 
   if (selfie(argc, (int*) argv) != 0) {

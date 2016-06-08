@@ -3531,10 +3531,10 @@ int gr_expression() {
 
   ltype = gr_comparisonExpression(attribute);
 
-  if (isBoolean()) {
+  while (isBoolean()) {
     operatorSymbol = symbol;
 
-    checkType(INT_T, ltype);
+    getSymbol();
 
     if (operatorSymbol == SYM_AND) {
       setFChain(attribute, createFixupChainEntry(binaryLength, getFChain(attribute)));
@@ -3544,12 +3544,6 @@ int gr_expression() {
       setTChain(attribute, createFixupChainEntry(binaryLength, getTChain(attribute)));
       emitIFormat(OP_BNE, REG_ZR, currentTemporary(), 0);
     }
-  }
-
-  while (isBoolean()) {
-    operatorSymbol = symbol;
-
-    getSymbol();
 
     // previous factor not needed anymore
     tfree(1);
@@ -3557,15 +3551,6 @@ int gr_expression() {
     rtype = gr_comparisonExpression(attribute);
 
     checkType(ltype, rtype);
-
-    if (operatorSymbol == SYM_AND) {
-      setFChain(attribute, createFixupChainEntry(binaryLength, getFChain(attribute)));
-      emitIFormat(OP_BEQ, REG_ZR, currentTemporary(), 0);
-
-    } else if (operatorSymbol == SYM_OR) {
-      setTChain(attribute, createFixupChainEntry(binaryLength, getTChain(attribute)));
-      emitIFormat(OP_BNE, REG_ZR, currentTemporary(), 0);
-    }
   }
 
   fixupChain(getTChain(attribute));

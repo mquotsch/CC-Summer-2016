@@ -520,6 +520,7 @@ int lookForType();
 
 void save_temporaries();
 void restore_temporaries(int numberOfTemporaries);
+void flipBooleanCurrentTemporary();
 
 void syntaxErrorSymbol(int expected);
 void syntaxErrorUnexpected();
@@ -2396,6 +2397,8 @@ int lookForFactor() {
     return 0;
   else if (symbol == SYM_EOF)
     return 0;
+  else if (symbol == SYM_NOT)
+    return 0;
   else
     return 1;
 }
@@ -2509,6 +2512,13 @@ void restore_temporaries(int numberOfTemporaries) {
     emitIFormat(OP_LW, REG_SP, currentTemporary(), 0);
     emitIFormat(OP_ADDIU, REG_SP, REG_SP, WORDSIZE);
   }
+}
+
+void flipBooleanCurrentTemporary() {
+  emitIFormat(OP_BEQ, REG_ZR, currentTemporary(), 4);
+  emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 0);
+  emitIFormat(OP_BEQ, REG_ZR, currentTemporary(), 2);
+  emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 1);
 }
 
 void syntaxErrorSymbol(int expected) {
@@ -2827,7 +2837,6 @@ int gr_call(int* procedure) {
 
 int gr_factor(int* attribute) {
   int  hasCast;
-  int  flag_not;
   int  cast;
   int  type;
   int* entry;
@@ -2837,8 +2846,6 @@ int gr_factor(int* attribute) {
   // assert: n = allocatedTemporaries
 
   hasCast = 0;
-
-  flag_not = 0;
 
   type = INT_T;
 
@@ -2887,7 +2894,7 @@ int gr_factor(int* attribute) {
   }
 
   if (symbol == SYM_NOT) {
-    flag_not = 1;
+    setNotFlag(attribute, 1);
 
     getSymbol();
   }
@@ -3597,6 +3604,10 @@ int gr_expression() {
   while (entry != (int*) 0) {
     fixup_relative(getBinaryLength(entry));
     entry = getNextEntry(entry);
+  }
+
+  if (getNotFlag(attribute)) {
+    flipBooleanCurrentTemporary();
   }
 
   return ltype;
@@ -7708,6 +7719,13 @@ int main(int argc, int* argv) {
   argv = argv + 1;
 
   print((int*) "This is RSQ Selfie");
+  println();
+
+  if (!(1 && !(0 || 0) && 1) && !(1 || 0))
+    print((int*) "if");
+  else
+    print((int*) "else");
+
   println();
 
   if (selfie(argc, (int*) argv) != 0) {

@@ -509,6 +509,7 @@ int isStarOrDivOrModulo();
 int isPlusOrMinus();
 int isComparison();
 int isShift();
+int isBoolean();
 int logicalAnd(int arg1, int arg2);
 int logicalOr(int arg1, int arg2);
 int getSizeOfRecord(int* structInstance);
@@ -542,6 +543,7 @@ int  gr_factor(int* attribute);
 int  gr_term(int* attribute);
 int  gr_simpleExpression(int* attribute);
 int  gr_shiftExpression(int* attribute);
+int  gr_comparisonExpression(int* attribute);
 int  gr_expression();
 void gr_while();
 void gr_if();
@@ -555,6 +557,36 @@ void gr_cstar();
 int  gr_selector();
 void gr_record(int* variableOrProcedureName, int which);
 int  gr_structAccess();
+
+int* createFixupChainEntry(int binaryLength, int* chain);
+
+int  getAttributeValue(int* attribute) { return *attribute; }
+int  getAttributeFlag(int* attribute)  { return *(attribute + 1); }
+int  getNotFlag(int* attribute)        { return *(attribute + 2); }
+int* getFChain(int* attribute)         { return (int*) *(attribute + 3); }
+int* getTChain(int* attribute)         { return (int*) *(attribute + 4); }
+int  getLastOperator(int* attribute)   { return *(attribute + 5); }
+
+void  setAttributeValue(int* attribute, int value)  { *attribute = value; }
+void  setAttributeFlag(int* attribute, int flag)    { *(attribute + 1) = flag; }
+void  setNotFlag(int* attribute, int flag)          { *(attribute + 2) = flag; }
+void  setFChain(int* attribute, int* fChain)        { *(attribute + 3) = (int) fChain; }
+void  setTChain(int* attribute, int* tChain)        { *(attribute + 4) = (int) tChain; }
+void  setLastOperator(int* attribute, int operator) { *(attribute + 5) = operator; }
+
+int getBinaryLength(int* entry)   { return *(entry + 1); }
+void setBinaryLength(int* entry, int binaryLength) { *(entry +  1) = binaryLength; }
+
+int* createFixupChainEntry(int binaryLength, int* chain) {
+  int* newEntry;
+
+  newEntry = malloc(SIZEOFINT + SIZEOFINTSTAR);
+
+  setBinaryLength(newEntry, binaryLength);
+  setNextEntry(newEntry, chain);
+
+  return newEntry;
+}
 
 // ------------------------ GLOBAL VARIABLES -----------------------
 
@@ -2308,6 +2340,15 @@ int isShift() {
     return 0;
 }
 
+int isBoolean() {
+  if (symbol == SYM_AND)
+    return 1;
+  else if (symbol == SYM_OR)
+    return 1;
+  else
+    return 0;
+}
+
 int logicalAnd(int arg1, int arg2) {
   if (arg1) {
     if (arg2)
@@ -2786,6 +2827,7 @@ int gr_call(int* procedure) {
 
 int gr_factor(int* attribute) {
   int  hasCast;
+  int  flag_not;
   int  cast;
   int  type;
   int* entry;
@@ -2795,6 +2837,8 @@ int gr_factor(int* attribute) {
   // assert: n = allocatedTemporaries
 
   hasCast = 0;
+
+  flag_not = 0;
 
   type = INT_T;
 
@@ -2840,6 +2884,12 @@ int gr_factor(int* attribute) {
 
       return type;
     }
+  }
+
+  if (symbol == SYM_NOT) {
+    flag_not = 1;
+
+    getSymbol();
   }
 
   // dereference?
@@ -3390,14 +3440,10 @@ int gr_shiftExpression(int* attribute) {
   return ltype;
 }
 
-int gr_expression() {
+int gr_comparisonExpression(int* attribute) {
   int  ltype;
   int  operatorSymbol;
   int  rtype;
-  int* attribute;
-
-  //initialisation of the attribute
-  attribute = malloc(2 * SIZEOFINT);
 
   // assert: n = allocatedTemporaries
 
@@ -3487,6 +3533,71 @@ int gr_expression() {
   }
 
   // assert: allocatedTemporaries == n + 1
+
+  return ltype;
+}
+
+int gr_expression() {
+  int  ltype;
+  int  operatorSymbol;
+  int  rtype;
+  int* attribute;
+  int* entry;
+
+  //initialisation of the attribute
+  attribute = malloc(4 * SIZEOFINT + 2 * SIZEOFINTSTAR);
+
+  ltype = gr_comparisonExpression(attribute);
+
+  if (isBoolean()) {
+    operatorSymbol = symbol;
+
+    if (operatorSymbol == SYM_AND) {
+      setFChain(attribute, createFixupChainEntry(binaryLength, getFChain(attribute)));
+
+      emitIFormat(OP_BEQ, REG_ZR, currentTemporary(), 0);
+
+    } else if (operatorSymbol == SYM_OR) {
+      setTChain(attribute, createFixupChainEntry(binaryLength, getTChain(attribute)));
+
+      emitIFormat(OP_BNE, REG_ZR, currentTemporary(), 0);
+
+    }
+  }
+
+  while (isBoolean()) {
+    operatorSymbol = symbol;
+
+    getSymbol();
+
+    tfree(1);
+
+    rtype = gr_comparisonExpression(attribute);
+
+    if (operatorSymbol == SYM_AND) {
+      setFChain(attribute, createFixupChainEntry(binaryLength, getFChain(attribute)));
+
+      emitIFormat(OP_BEQ, REG_ZR, currentTemporary(), 0);
+    } else if (operatorSymbol == SYM_OR) {
+      setTChain(attribute, createFixupChainEntry(binaryLength, getTChain(attribute)));
+
+      emitIFormat(OP_BNE, REG_ZR, currentTemporary(), 0);
+    }
+  }
+
+  entry = getFChain(attribute);
+
+  while (entry != (int*) 0) {
+    fixup_relative(getBinaryLength(entry));
+    entry = getNextEntry(entry);
+  }
+
+  entry = getTChain(attribute);
+
+  while (entry != (int*) 0) {
+    fixup_relative(getBinaryLength(entry));
+    entry = getNextEntry(entry);
+  }
 
   return ltype;
 }
@@ -7580,7 +7691,7 @@ int selfie(int argc, int* argv) {
 
 int main(int argc, int* argv) {
   int x;
-  struct r_t* localStruct;
+  int y;
 
   initLibrary();
 
@@ -7597,26 +7708,6 @@ int main(int argc, int* argv) {
   argv = argv + 1;
 
   print((int*) "This is RSQ Selfie");
-  println();
-
-  // local structs test
-  localStruct = (struct localStruct*) malloc(12);
-  localStruct -> a = 32;
-  x = localStruct -> a + localStruct -> a;
-  print(itoa(localStruct -> a, string_buffer, 10, 0, 0));
-  println();
-
-  localStruct -> b = 17;
-  print(itoa(localStruct -> b, string_buffer, 10, 0, 0));
-  println();
-
-  // global structs testen
-  globalStruct = (struct globalStruct*) malloc(12);
-  globalStruct -> a = 44444;
-  x = globalStruct -> a;
-  print(itoa(x, string_buffer, 10, 0, 0));
-  println();
-  print((int*) "---");
   println();
 
   if (selfie(argc, (int*) argv) != 0) {

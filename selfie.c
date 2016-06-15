@@ -1756,18 +1756,10 @@ int findNextCharacter() {
 }
 
 int isCharacterLetter() {
-  if (character >= 'a')
-    if (character <= 'z')
+  if (character >= 'a' && character <= 'z' || character >= 'A' && character <= 'Z')
       return 1;
-    else
-      return 0;
-  else if (character >= 'A')
-    if (character <= 'Z')
-      return 1;
-    else
-      return 0;
   else
-    return 0;
+      return 0;
 }
 
 int isCharacterDigit() {
@@ -3521,7 +3513,10 @@ int gr_expression() {
   int  ltype;
   int  rtype;
   int  operatorSymbol;
+  int  previousOperatorSymbol;
   int* attribute;
+
+  operatorSymbol = 0;
 
   //initialisation of the attribute
   attribute = malloc(4 * SIZEOFINT + 2 * SIZEOFINTSTAR);
@@ -3529,6 +3524,7 @@ int gr_expression() {
   ltype = gr_comparisonExpression(attribute);
 
   while (isBoolean()) {
+    previousOperatorSymbol = operatorSymbol;
     operatorSymbol = symbol;
 
     getSymbol();
@@ -3538,6 +3534,10 @@ int gr_expression() {
       emitIFormat(OP_BEQ, REG_ZR, currentTemporary(), 0);
 
     } else if (operatorSymbol == SYM_OR) {
+        if (previousOperatorSymbol == SYM_AND) {
+          fixupChain(getFChain(attribute));
+          setFChain(attribute, (int*) 0);
+        }
       setTChain(attribute, createFixupChainEntry(binaryLength, getTChain(attribute)));
       emitIFormat(OP_BNE, REG_ZR, currentTemporary(), 0);
     }
@@ -7693,6 +7693,20 @@ int main(int argc, int* argv) {
     print((int*) "correct");
   else
     print((int*) "not correct");
+
+  println();
+
+  if(y && 1 || 1 || 0 || x && 1 && 0 && 1 || 0 && x)
+    print((int*) "correct");
+  else
+    print((int*) "not correct");
+
+  println();
+
+  if(y && 1 || 0 || 0 || x && 1 && 0 && 1 || 0 && x)
+    print((int*) "not correct");
+  else
+    print((int*) "correct");
 
   println();
 

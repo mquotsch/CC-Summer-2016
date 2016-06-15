@@ -1480,13 +1480,12 @@ int* itoa(int n, int* s, int b, int a, int p) {
   }
 
   while (n != 0) {
-    if (p > 0)
-      if (i == p) {
-        storeCharacter(s, i, '.'); // set point of fixed point number
+    if (p > 0 && i == p) {
+      storeCharacter(s, i, '.'); // set point of fixed point number
 
-        i = i + 1;
-        p = 0;
-      }
+      i = i + 1;
+      p = 0;
+    }
 
     if (n % b > 9)
       storeCharacter(s, i, n % b - 10 + 'A');
@@ -1699,13 +1698,7 @@ void getCharacter() {
 }
 
 int isCharacterWhitespace() {
-  if (character == CHAR_SPACE)
-    return 1;
-  else if (character == CHAR_TAB)
-    return 1;
-  else if (character == CHAR_LF)
-    return 1;
-  else if (character == CHAR_CR)
+  if (character == CHAR_SPACE || character == CHAR_TAB || character == CHAR_LF || character == CHAR_CR)
     return 1;
   else
     return 0;
@@ -4342,8 +4335,7 @@ int gr_selector() {
   entry = getVariable(identifier);
 
   // arrays as parameters
-  if (getAddress(entry) > 0) {
-    if (getType(entry) == ARRAYINT_T) {
+  if (getAddress(entry) > 0 && getType(entry) == ARRAYINT_T) {
       load_variable(identifier);
 
       getSymbol();
@@ -4366,7 +4358,6 @@ int gr_selector() {
       emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_ADDU);
 
       tfree(1);
-    }
 
     // arrays in a statement: e.g. a[2] = 3;
   } else {
@@ -4835,9 +4826,7 @@ void decode() {
 
   if (opcode == 0)
     decodeRFormat();
-  else if (opcode == OP_JAL)
-    decodeJFormat();
-  else if (opcode == OP_J)
+  else if (opcode == OP_JAL || opcode == OP_J)
     decodeJFormat();
   else
     decodeIFormat();
@@ -5467,13 +5456,7 @@ int down_loadString(int* table, int vaddr, int* s) {
 
         *(s + i) = loadPhysicalMemory(paddr);
 
-        if (loadCharacter(paddr, 0) == 0)
-          return 1;
-        else if (loadCharacter(paddr, 1) == 0)
-          return 1;
-        else if (loadCharacter(paddr, 2) == 0)
-          return 1;
-        else if (loadCharacter(paddr, 3) == 0)
+        if (loadCharacter(paddr, 0) == 0 || loadCharacter(paddr, 1) == 0 || loadCharacter(paddr, 2) == 0 || loadCharacter(paddr, 3) == 0)
           return 1;
 
         vaddr = vaddr + WORDSIZE;
@@ -5946,11 +5929,10 @@ void storePhysicalMemory(int* paddr, int data) {
 }
 
 int isValidVirtualAddress(int vaddr) {
-  if (vaddr >= 0)
-    if (vaddr < VIRTUALMEMORYSIZE)
-      // memory must be word-addressed for lack of byte-sized data type
-      if (vaddr % WORDSIZE == 0)
-        return 1;
+  if (vaddr >= 0 && vaddr < VIRTUALMEMORYSIZE)
+    // memory must be word-addressed for lack of byte-sized data type
+    if (vaddr % WORDSIZE == 0)
+      return 1;
 
   return 0;
 }
@@ -6933,9 +6915,7 @@ void execute() {
   }
 
   if (opcode == OP_SPECIAL) {
-    if (function == FCT_NOP)
-            fct_sll();
-    else if (function == FCT_SLL)
+    if (function == FCT_NOP || function == FCT_SLL)
       fct_sll();
     else if (function == FCT_SRL)
       fct_srl();
@@ -6991,15 +6971,14 @@ void execute() {
 void interrupt() {
   cycles = cycles + 1;
 
-  if (timer > 0)
-    if (cycles == timer) {
-      cycles = 0;
+  if (timer > 0 && cycles == timer) {
+    cycles = 0;
 
-      if (status == 0)
-        // only throw exception if no other is pending
-        // TODO: handle multiple pending exceptions
-        throwException(EXCEPTION_INTERRUPT, 0);
-    }
+    if (status == 0)
+      // only throw exception if no other is pending
+      // TODO: handle multiple pending exceptions
+      throwException(EXCEPTION_INTERRUPT, 0);
+  }
 }
 
 void runUntilException() {
@@ -7163,11 +7142,10 @@ int addressWithMaxCounter(int* counters, int max) {
   while (i < maxBinaryLength / WORDSIZE) {
     c = *(counters + i);
 
-    if (n < c)
-      if (c < max) {
-        n = c;
-        a = i * WORDSIZE;
-      }
+    if (n < c && c < max) {
+      n = c;
+      a = i * WORDSIZE;
+    }
 
     i = i + 1;
   }

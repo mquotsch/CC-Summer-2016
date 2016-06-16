@@ -3406,13 +3406,160 @@ int gr_shiftExpression(int* attribute) {
 }
 
 int gr_comparisonExpression(int* attribute) {
-  int  ltype;
-  int  operatorSymbol;
-  int  rtype;
+  int ltype;
+  int operatorSymbol;
+  int rtype;
+  int tempAttributeValue;
+  int tempAttributeFlag;
+  int firstOperandReg;
+  int secondOperandReg;
 
   // assert: n = allocatedTemporaries
 
   ltype = gr_shiftExpression(attribute);
+
+  // assert: allocatedTemporaries == n + 1
+
+  //optional: ==, !=, <, >, <=, >= simpleExpression
+  if (isComparison()) {
+    tempAttributeValue = *attribute;
+    tempAttributeFlag = *(attribute + 1);
+
+    operatorSymbol = symbol;
+
+    getSymbol();
+
+    rtype = gr_shiftExpression(attribute);
+
+    // both values constant -> folding
+    if (tempAttributeFlag && *(attribute + 1)) {
+      if (operatorSymbol == SYM_EQUALITY) {
+
+        if (tempAttributeValue == *attribute)
+          load_integer(1);
+        else
+          load_integer(0);
+
+      } else if (operatorSymbol == SYM_NOTEQ) {
+
+        if (tempAttributeValue != *attribute)
+          load_integer(1);
+        else
+          load_integer(0);
+
+      } else if (operatorSymbol == SYM_LT) {
+
+        if (tempAttributeValue < *attribute)
+          load_integer(1);
+        else
+          load_integer(0);
+
+      } else if (operatorSymbol == SYM_GT) {
+
+        if (tempAttributeValue > *attribute)
+          load_integer(1);
+        else
+          load_integer(0);
+
+      } else if (operatorSymbol == SYM_LEQ) {
+
+        if (tempAttributeValue <= *attribute)
+          load_integer(1);
+        else
+          load_integer(0);
+
+      } else if (operatorSymbol == SYM_GEQ) {
+
+        if (tempAttributeValue >= *attribute)
+          load_integer(1);
+        else
+          load_integer(0);
+
+      }
+    } else {
+      if (*(attribute + 1))
+        load_integer(*attribute);
+
+      if (tempAttributeFlag) {
+        if (tempAttributeValue < 0) {
+          load_integer(-tempAttributeValue);
+          emitRFormat(OP_SPECIAL, REG_ZR, currentTemporary(), currentTemporary(), FCT_SUBU);
+        } else
+          load_integer(tempAttributeValue);
+
+        // load order changed
+        firstOperandReg = currentTemporary();
+        secondOperandReg = previousTemporary();
+
+      } else {
+        firstOperandReg = previousTemporary();
+        secondOperandReg = currentTemporary();
+      }
+
+      // assert: allocatedTemporaries == n + 2
+
+      checkType(ltype, rtype);
+
+      if (operatorSymbol == SYM_EQUALITY) {
+        // subtract, if result = 0 then 1, else 0
+        emitRFormat(OP_SPECIAL, firstOperandReg, secondOperandReg, previousTemporary(), FCT_SUBU);
+
+        tfree(1);
+
+        emitIFormat(OP_BEQ, REG_ZR, currentTemporary(), 4);
+        emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 0);
+        emitIFormat(OP_BEQ, REG_ZR, currentTemporary(), 2);
+        emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 1);
+
+      } else if (operatorSymbol == SYM_NOTEQ) {
+        // subtract, if result = 0 then 0, else 1
+        emitRFormat(OP_SPECIAL, firstOperandReg, secondOperandReg, previousTemporary(), FCT_SUBU);
+
+        tfree(1);
+
+        emitIFormat(OP_BNE, REG_ZR, currentTemporary(), 4);
+        emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 0);
+        emitIFormat(OP_BEQ, REG_ZR, currentTemporary(), 2);
+        emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 1);
+
+      } else if (operatorSymbol == SYM_LT) {
+        // set to 1 if a < b, else 0
+        emitRFormat(OP_SPECIAL, firstOperandReg, secondOperandReg, previousTemporary(), FCT_SLT);
+
+        tfree(1);
+
+      } else if (operatorSymbol == SYM_GT) {
+        // set to 1 if b < a, else 0
+        emitRFormat(OP_SPECIAL, secondOperandReg, firstOperandReg, previousTemporary(), FCT_SLT);
+
+        tfree(1);
+
+      } else if (operatorSymbol == SYM_LEQ) {
+        // if b < a set 0, else 1
+        emitRFormat(OP_SPECIAL, secondOperandReg, firstOperandReg, previousTemporary(), FCT_SLT);
+
+        tfree(1);
+
+        emitIFormat(OP_BNE, REG_ZR, currentTemporary(), 4);
+        emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 1);
+        emitIFormat(OP_BEQ, REG_ZR, REG_ZR, 2);
+        emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 0);
+
+      } else if (operatorSymbol == SYM_GEQ) {
+        // if a < b set 0, else 1
+        emitRFormat(OP_SPECIAL, firstOperandReg, secondOperandReg, previousTemporary(), FCT_SLT);
+
+        tfree(1);
+
+        emitIFormat(OP_BNE, REG_ZR, currentTemporary(), 4);
+        emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 1);
+        emitIFormat(OP_BEQ, REG_ZR, REG_ZR, 2);
+        emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 0);
+      }
+    }
+
+    *(attribute + 1) = 0;
+  }
 
   if (*(attribute + 1)) {
     if (*attribute < 0) {
@@ -3420,81 +3567,6 @@ int gr_comparisonExpression(int* attribute) {
       emitRFormat(OP_SPECIAL, REG_ZR, currentTemporary(), currentTemporary(), FCT_SUBU);
     } else
       load_integer(*attribute);
-  }
-
-  // assert: allocatedTemporaries == n + 1
-
-  //optional: ==, !=, <, >, <=, >= simpleExpression
-  if (isComparison()) {
-    operatorSymbol = symbol;
-
-    getSymbol();
-
-    rtype = gr_shiftExpression(attribute);
-
-    if (*(attribute + 1))
-      load_integer(*attribute);
-
-    // assert: allocatedTemporaries == n + 2
-
-    checkType(ltype, rtype);
-
-    if (operatorSymbol == SYM_EQUALITY) {
-      // subtract, if result = 0 then 1, else 0
-      emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SUBU);
-
-      tfree(1);
-
-      emitIFormat(OP_BEQ, REG_ZR, currentTemporary(), 4);
-      emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 0);
-      emitIFormat(OP_BEQ, REG_ZR, currentTemporary(), 2);
-      emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 1);
-
-    } else if (operatorSymbol == SYM_NOTEQ) {
-      // subtract, if result = 0 then 0, else 1
-      emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SUBU);
-
-      tfree(1);
-
-      emitIFormat(OP_BNE, REG_ZR, currentTemporary(), 4);
-      emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 0);
-      emitIFormat(OP_BEQ, REG_ZR, currentTemporary(), 2);
-      emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 1);
-
-    } else if (operatorSymbol == SYM_LT) {
-      // set to 1 if a < b, else 0
-      emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SLT);
-
-      tfree(1);
-
-    } else if (operatorSymbol == SYM_GT) {
-      // set to 1 if b < a, else 0
-      emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SLT);
-
-      tfree(1);
-
-    } else if (operatorSymbol == SYM_LEQ) {
-      // if b < a set 0, else 1
-      emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SLT);
-
-      tfree(1);
-
-      emitIFormat(OP_BNE, REG_ZR, currentTemporary(), 4);
-      emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 1);
-      emitIFormat(OP_BEQ, REG_ZR, REG_ZR, 2);
-      emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 0);
-
-    } else if (operatorSymbol == SYM_GEQ) {
-      // if a < b set 0, else 1
-      emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SLT);
-
-      tfree(1);
-
-      emitIFormat(OP_BNE, REG_ZR, currentTemporary(), 4);
-      emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 1);
-      emitIFormat(OP_BEQ, REG_ZR, REG_ZR, 2);
-      emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 0);
-    }
   }
 
   // assert: allocatedTemporaries == n + 1
